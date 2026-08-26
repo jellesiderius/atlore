@@ -1,5 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { env } from '$lib/server/config';
 
@@ -43,11 +43,20 @@ export async function getObject(key: string): Promise<Uint8Array> {
   return readFile(safeLocalPath(key));
 }
 
-function safeLocalPath(key: string): string {
-  if (!/^[a-zA-Z0-9/_-]+$/.test(key) || key.includes('..'))
+export function safeLocalPath(key: string): string {
+  const segments = key.split('/');
+  if (
+    !key ||
+    key.startsWith('/') ||
+    segments.some(
+      (segment) =>
+        !segment || segment === '.' || segment === '..' || !/^[a-zA-Z0-9_.-]+$/.test(segment)
+    )
+  ) {
     throw new Error('Ongeldige storage key.');
+  }
   const root = resolve(env.STORAGE_PATH);
   const target = resolve(join(root, key));
-  if (!target.startsWith(`${root}/`)) throw new Error('Ongeldige storage key.');
+  if (!target.startsWith(`${root}${sep}`)) throw new Error('Ongeldige storage key.');
   return target;
 }
