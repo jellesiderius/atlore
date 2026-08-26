@@ -38,7 +38,16 @@
     if (menu.query.trim()) return searchNodes(nodes, menu.query, { limit: 8 });
     return nodes.filter((node) => !node.trashedAt && node.type !== 'session').slice(0, 8);
   });
-  let canCreate = $derived(!!createNode && !!menu?.query.trim());
+  let canCreate = $derived.by(() => {
+    if (!createNode || !menu) return false;
+
+    const query = menu.query.trim();
+    if (!query) return true;
+
+    return !nodes.some(
+      (node) => !node.trashedAt && node.type !== 'session' && fold(node.title) === fold(query)
+    );
+  });
 
   onMount(() => {
     render(normalizeBody(body));
@@ -274,7 +283,11 @@
         class="new"
         class:active={menu.index === results.length}
         onpointerdown={createFromMenu}
-        ><span>+</span><b>{t('editor.newNode', { title: menu.query.trim() })}</b></button
+        ><span>+</span><b
+          >{menu.query.trim()
+            ? t('editor.newNode', { title: menu.query.trim() })
+            : t('editor.createNode')}</b
+        ></button
       >{/if}
     {#if !results.length && !canCreate}<div class="empty">{t('editor.noResults')}</div>{/if}
   </div>

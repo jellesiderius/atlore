@@ -338,7 +338,8 @@ editor:
   secret: secret
   openNode: Open {{title}}
   connectTo: Connect to {{title}}
-  newNode: New {{title}}
+  newNode: 'New: “{{title}}”'
+  createNode: Create new node
   noResults: No results
 atlas:
   fit: Fit map

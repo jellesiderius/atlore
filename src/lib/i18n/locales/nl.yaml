@@ -338,7 +338,8 @@ editor:
   secret: geheim
   openNode: '{{title}} openen'
   connectTo: Koppel aan {{title}}
-  newNode: Nieuw {{title}}
+  newNode: 'Nieuw: “{{title}}”'
+  createNode: Nieuwe node maken
   noResults: Geen resultaten
 atlas:
   fit: Kaart passend

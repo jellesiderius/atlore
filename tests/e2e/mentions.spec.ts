@@ -55,10 +55,15 @@ test('een @ toont nodes en biedt daaronder een nieuwe node aan', async ({ page }
     const menu = page.getByRole('listbox');
     await expect(menu).toBeVisible();
     await expect(menu.getByText('Bestaande testnode', { exact: true })).toBeVisible();
+    await expect(menu.getByText('Nieuwe node maken', { exact: true })).toBeVisible();
 
-    await editor.pressSequentially('Volledig nieuwe node');
-    await expect(menu.getByText('Nieuw Volledig nieuwe node', { exact: true })).toBeVisible();
-    await menu.getByText('Nieuw Volledig nieuwe node', { exact: true }).click();
+    await editor.pressSequentially('Bestaande testnode');
+    await expect(menu.getByText('Bestaande testnode', { exact: true })).toBeVisible();
+    await expect(menu.locator('button.new')).toHaveCount(0);
+
+    await editor.fill('@Volledig nieuwe node');
+    await expect(menu.getByText('Nieuw: “Volledig nieuwe node”', { exact: true })).toBeVisible();
+    await menu.getByText('Nieuw: “Volledig nieuwe node”', { exact: true }).click();
     await expect(page.getByPlaceholder('Naam')).toHaveValue('Volledig nieuwe node');
   } finally {
     await page.evaluate(async (id) => {
