@@ -12,4 +12,6 @@ Thanks for helping improve Atlore.
 
 Keep UI additions component-based and preserve server-side permission checks for every new API path. Add a focused unit or Playwright regression test for behavioral changes. Never commit `.env`, credentials, uploaded files or production data.
 
+The version-controlled source for the GitHub Wiki lives in `docs/wiki/`. Update those pages together with user-facing behavior and run `make publish-wiki` after merging documentation changes. GitHub requires its first Wiki page to be initialized in the web interface before the Wiki Git remote can be cloned.
+
 For security issues, use GitHub's private security advisory flow rather than a public issue.

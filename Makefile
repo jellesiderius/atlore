@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 COMPOSE := docker compose
 
-.PHONY: help install infra dev up launch down stop restart logs status build migrate seed seed-10k test test-10k e2e check shell db-shell clean destroy
+.PHONY: help install infra dev up launch down stop restart logs status build migrate seed seed-10k test test-10k e2e check publish-wiki shell db-shell clean destroy
 
 help: ## Toon alle commando's
 	@awk 'BEGIN {FS = ":.*## "; printf "Atlore commando’s:\n\n"} /^[a-zA-Z_-]+:.*## / { printf "  %-13s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -58,6 +58,9 @@ e2e: ## Draai Playwright end-to-endtests
 
 check: ## Typecheck, lint en tests
 	npm run check && npm run lint && npm run test
+
+publish-wiki: ## Publiceer docs/wiki naar de GitHub Wiki
+	./scripts/publish-wiki.sh
 
 shell: ## Open een shell in de appcontainer
 	$(COMPOSE) exec app sh

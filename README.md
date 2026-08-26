@@ -19,6 +19,10 @@ Then open [http://localhost:3000](http://localhost:3000). The demo data includes
 
 Change all example passwords and secrets before making the stack publicly accessible.
 
+## Documentation
+
+New to Atlore? Follow the [Getting Started guide](https://github.com/jellesiderius/atlore/wiki/Getting-Started) from account creation to your first collaborative session. The complete [Atlore Wiki](https://github.com/jellesiderius/atlore/wiki) also covers campaign permissions, graph controls, nodes, maps, realtime collaboration, account settings, self-hosting, and troubleshooting.
+
 ## Everyday commands
 
 ```bash
@@ -89,7 +93,7 @@ Composer is intentionally not included because Atlore has no PHP runtime or PHP 
 ## Features
 
 - account registration, sign-in, sign-out, and password recovery;
-- multiple campaigns, invitations, member roles, and 14 configurable player permissions;
+- multiple campaigns, invitations, member roles, and 15 configurable player permissions;
 - twelve built-in node types and support for custom node types;
 - an interactive force graph with search, filtering, dragging, reflow, and context menus;
 - Obsidian-style connected swarm dragging with a focus backdrop and worker-based layout;
