@@ -1,5 +1,33 @@
 import { expect, test } from '@playwright/test';
 
+test('productieshell levert manifest zonder router- of socketwaarschuwingen', async ({
+  page,
+  request
+}) => {
+  const manifestResponse = await request.get('/manifest.webmanifest');
+  expect(manifestResponse.ok()).toBeTruthy();
+  expect(manifestResponse.headers()['content-type']).toContain('application/manifest+json');
+  await expect(manifestResponse.json()).resolves.toMatchObject({
+    name: 'Atlore',
+    start_url: '/',
+    scope: '/'
+  });
+
+  const messages: string[] = [];
+  page.on('pageerror', (error) => messages.push(error.message));
+  page.on('console', (message) => {
+    if (['warning', 'error'].includes(message.type())) messages.push(message.text());
+  });
+  await page.goto('/auth/login');
+  await page.getByPlaceholder('E-mailadres').fill('demo@atlore.app');
+  await page.getByPlaceholder('Wachtwoord').fill('AtloreDemo!2026');
+  await page.getByRole('button', { name: 'Inloggen' }).click();
+  await page.getByText('Ember & Rust', { exact: true }).first().click();
+  await expect(page.locator('main.workspace')).toHaveAttribute('data-realtime', 'connected');
+
+  expect(messages).toEqual([]);
+});
+
 test('same-origin login werkt ook via een alternatieve lokale host', async ({ request }) => {
   const alternativeOrigin = new URL(process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000');
   alternativeOrigin.hostname = '127.0.0.1';

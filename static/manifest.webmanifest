@@ -1,0 +1,11 @@
+{
+  "name": "Atlore",
+  "short_name": "Atlore",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1a1816",
+  "theme_color": "#1a1816",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

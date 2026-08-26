@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import Redis from 'ioredis';
 import { WebSocketServer } from 'ws';
