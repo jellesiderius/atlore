@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { searchNodes } from '$lib/domain/search';
   import type { NodeType, WorldNode } from '$lib/types';
+  import { nodeTypeLabel, t } from '$lib/i18n/index.svelte';
   let {
     nodes,
     types,
@@ -40,7 +41,7 @@
         bind:this={input}
         bind:value={query}
         onkeydown={key}
-        placeholder="Zoek in deze wereld…"
+        placeholder={t('search.worldPlaceholder')}
       />
     </div>
     <div class="results">
@@ -50,10 +51,17 @@
           onclick={() => open(node.id)}
           ><span style:background={types.find((type) => type.key === node.type)?.colorDark}
           ></span><b>{node.title}</b><small
-            >{types.find((type) => type.key === node.type)?.one}</small
+            >{types.find((type) => type.key === node.type)
+              ? nodeTypeLabel(
+                  types.find((type) => type.key === node.type)!,
+                  'singular'
+                )
+              : ''}</small
           ></button
-        >{/each}{#if query && !results.length}<div>Niets gevonden.</div>{/if}{#if !query}<div>
-          Typ een naam, plek, quest of voorwerp.
+        >{/each}{#if query && !results.length}<div>
+          {t('explorer.nothingFound')}
+        </div>{/if}{#if !query}<div>
+          {t('search.prompt')}
         </div>{/if}
     </div>
   </section>

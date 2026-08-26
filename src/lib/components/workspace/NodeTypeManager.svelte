@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { NodeType } from '$lib/types';
+  import { nodeTypeLabel, t } from '$lib/i18n/index.svelte';
 
   const swatches = [
     '#e57373',
@@ -69,7 +70,7 @@
       pluralName = '';
       expanded = false;
     } catch (cause) {
-      message = cause instanceof Error ? cause.message : 'Type toevoegen is mislukt.';
+      message = cause instanceof Error ? cause.message : t('nodeTypeManager.addFailed');
     } finally {
       busy = false;
     }
@@ -77,20 +78,26 @@
 </script>
 
 <div class="type-heading">
-  <div class="eyebrow">Nodetypes · {types.filter((type) => type.key !== 'session').length}</div>
+  <div class="eyebrow">
+    {t('nodeTypeManager.title', { count: types.filter((type) => type.key !== 'session').length })}
+  </div>
   {#if canManage}<button onclick={() => (expanded = !expanded)}
-      >{expanded ? 'Sluiten' : '+ Eigen type'}</button
+      >{expanded ? t('common.close') : `+ ${t('nodeTypeManager.ownType')}`}</button
     >{/if}
 </div>
 
 <div class="type-list">
   {#each types.filter((type) => type.key !== 'session') as type}
     <div>
-      <span style:background={type.colorDark}></span><b>{type.nl}</b><small>{type.one}</small>
+      <span style:background={type.colorDark}></span><b>{nodeTypeLabel(type)}</b><small
+        >{nodeTypeLabel(type, 'singular')}</small
+      >
       {#if type.custom && canManage}
         <button
-          aria-label={`${type.nl} verwijderen`}
-          onclick={() => confirm(`Type ${type.nl} verwijderen?`) && remove(type.key)}>×</button
+          aria-label={t('nodeTypeManager.removeLabel', { name: nodeTypeLabel(type) })}
+          onclick={() =>
+            confirm(t('nodeTypeManager.removeConfirm', { name: nodeTypeLabel(type) })) &&
+            remove(type.key)}>×</button
         >
       {/if}
     </div>
@@ -102,14 +109,14 @@
     <input
       class="field"
       bind:value={singularName}
-      placeholder="Enkelvoud, bv. Schip"
+      placeholder={t('nodeTypeManager.singularPlaceholder')}
       required
       maxlength="50"
     />
     <input
       class="field"
       bind:value={pluralName}
-      placeholder="Meervoud, bv. Schepen"
+      placeholder={t('nodeTypeManager.pluralPlaceholder')}
       maxlength="50"
     />
     <div class="swatches">
@@ -118,12 +125,14 @@
           type="button"
           class:active={color === swatch}
           style:background={swatch}
-          aria-label={`Kleur ${swatch}`}
+          aria-label={t('nodeTypeManager.color', { color: swatch })}
           onclick={() => (color = swatch)}
         ></button>
       {/each}
     </div>
-    <button class="primary-button" disabled={busy}>{busy ? 'Toevoegen…' : 'Type toevoegen'}</button>
+    <button class="primary-button" disabled={busy}
+      >{busy ? t('nodeTypeManager.adding') : t('nodeTypeManager.add')}</button
+    >
     {#if message}<p role="alert">{message}</p>{/if}
   </form>
 {/if}

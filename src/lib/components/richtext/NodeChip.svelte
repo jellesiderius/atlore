@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { NodeType, WorldNode } from '$lib/types';
+  import { nodeTypeLabel, t } from '$lib/i18n/index.svelte';
   let {
     node,
     type,
@@ -14,14 +15,16 @@
     class:secret
     type="button"
     style:--chip-color={color}
-    aria-label={secret || !node ? 'Geheime node' : `${node.title} openen`}
-    {onclick}>{secret || !node ? '✦ geheim' : node.title}</button
+    aria-label={secret || !node
+      ? t('editor.secretNode')
+      : t('editor.openNode', { title: node.title })}
+    {onclick}>{secret || !node ? `✦ ${t('editor.secret')}` : node.title}</button
   >
   {#if node && !secret}
     <span class="hover-card" role="tooltip" style:--chip-color={color}>
-      <small><i></i>{type?.one ?? node.type}</small>
+      <small><i></i>{type ? nodeTypeLabel(type, 'singular') : node.type}</small>
       <b>{node.title}</b>
-      <em>{node.summary || 'Nog geen samenvatting.'}</em>
+      <em>{node.summary || t('graph.noSummary')}</em>
     </span>
   {/if}
 </span>

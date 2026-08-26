@@ -4,6 +4,7 @@
   import AuthFormMessage from '$lib/components/auth/AuthFormMessage.svelte';
   import AuthShell from '$lib/components/auth/AuthShell.svelte';
   import { api } from '$lib/client/api';
+  import { t } from '$lib/i18n/index.svelte';
   let name = $state('');
   let email = $state('');
   let password = $state('');
@@ -21,51 +22,48 @@
       const next = page.url.searchParams.get('next');
       await goto(next?.startsWith('/') ? next : '/campaigns', { invalidateAll: true });
     } catch (cause) {
-      message = cause instanceof Error ? cause.message : 'Aanmelden is mislukt.';
+      message = cause instanceof Error ? cause.message : t('auth.register.failed');
     } finally {
       busy = false;
     }
   }
 </script>
 
-<svelte:head><title>Account maken · Atlore</title></svelte:head>
-<AuthShell
-  heading="Neem plaats"
-  subheading="Maak een account en begin een wereld die met elk verhaal groeit."
->
+<svelte:head><title>{t('auth.register.title')} · Atlore</title></svelte:head>
+<AuthShell heading={t('auth.register.heading')} subheading={t('auth.register.subheading')}>
   <form onsubmit={submit}>
     <input
       class="field"
-      aria-label="Naam"
+      aria-label={t('auth.register.name')}
       autocomplete="name"
-      placeholder="Hoe mogen we je noemen?"
+      placeholder={t('auth.register.namePlaceholder')}
       bind:value={name}
       required
     />
     <input
       class="field"
-      aria-label="E-mailadres"
+      aria-label={t('auth.email')}
       type="email"
       autocomplete="email"
-      placeholder="E-mailadres"
+      placeholder={t('auth.email')}
       bind:value={email}
       required
     />
     <input
       class="field"
-      aria-label="Wachtwoord"
+      aria-label={t('auth.password')}
       type="password"
       autocomplete="new-password"
-      placeholder="Wachtwoord · minstens 10 tekens"
+      placeholder={t('auth.register.passwordPlaceholder')}
       minlength="10"
       bind:value={password}
       required
     />
     {#if message}<AuthFormMessage {message} />{/if}
     <button class="primary-button submit" disabled={busy}
-      >{busy ? 'Even wachten…' : 'Account maken'}</button
+      >{busy ? t('auth.wait') : t('auth.register.submit')}</button
     >
-    <p>Al een account? <a href="/auth/login">Inloggen</a></p>
+    <p>{t('auth.register.existing')} <a href="/auth/login">{t('auth.login.submit')}</a></p>
   </form>
 </AuthShell>
 

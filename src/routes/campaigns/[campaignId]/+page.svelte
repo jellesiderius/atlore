@@ -22,6 +22,7 @@
   import { api } from '$lib/client/api';
   import { createClientId } from '$lib/client/id';
   import { may } from '$lib/domain/permissions';
+  import { t } from '$lib/i18n/index.svelte';
   import type {
     MediaAsset,
     Paragraph,
@@ -180,7 +181,7 @@
     await refresh();
     createState?.insert?.(result.id);
     selected = result.id;
-    notify('Node toegevoegd.');
+    notify(t('graph.nodeAdded'));
     return result.id;
   }
   function mentionCreate(title: string, insert: (id: string) => void) {
@@ -199,8 +200,8 @@
       body: JSON.stringify({ sourceId: a, targetId: b })
     });
     await refresh();
-    notify('Koppeling gelegd.', {
-      label: 'Ongedaan',
+    notify(t('workspace.linkAdded'), {
+      label: t('common.undo'),
       run: async () => {
         await disconnect(link.id);
       }
@@ -209,7 +210,7 @@
   async function disconnect(id: string) {
     await api(`/api/campaigns/${snapshot.campaign.id}/links/${id}`, { method: 'DELETE' });
     await refresh();
-    notify('Koppeling verwijderd.');
+    notify(t('workspace.linkRemoved'));
   }
   function nodeContext(id: string | null, x: number, y: number) {
     const node = id ? nodeMap.get(id) : null;
@@ -218,12 +219,18 @@
       y,
       items: node
         ? [
-            { label: 'Openen', icon: 'session', run: () => openNode(node.id) },
+            { label: t('common.open'), icon: 'session', run: () => openNode(node.id) },
             ...(can('link')
-              ? [{ label: 'Verbinden met…', icon: 'link', run: () => (connectId = node.id) }]
+              ? [
+                  {
+                    label: t('workspace.context.connect'),
+                    icon: 'link',
+                    run: () => (connectId = node.id)
+                  }
+                ]
               : []),
             {
-              label: 'Toon in de graph',
+              label: t('workspace.context.showGraph'),
               icon: 'graph',
               run: () => {
                 view = 'graph';
@@ -231,7 +238,7 @@
               }
             },
             {
-              label: 'Tonen op de kaart',
+              label: t('graph.showOnMap'),
               icon: 'atlas',
               run: () => {
                 view = 'atlas';
@@ -241,7 +248,7 @@
             ...(can('reveal')
               ? [
                   {
-                    label: node.revealed ? 'Verbergen' : 'Onthullen',
+                    label: node.revealed ? t('graph.hide') : t('graph.reveal'),
                     icon: node.revealed ? 'eye-off' : 'eye',
                     run: () => patchNode(node.id, { revealed: !node.revealed })
                   }
@@ -250,7 +257,7 @@
             ...(can('delete')
               ? [
                   {
-                    label: 'Naar prullenbak',
+                    label: t('workspace.context.trash'),
                     icon: 'trash',
                     danger: true,
                     run: () => patchNode(node.id, { trashed: true })
@@ -262,14 +269,14 @@
             ...(can('create')
               ? [
                   {
-                    label: 'Nieuwe node hier',
+                    label: t('workspace.context.newHere'),
                     icon: 'plus',
                     run: () => (createState = { title: '', x: 0, y: 0 })
                   }
                 ]
               : []),
-            { label: 'Alles passend', icon: 'fit', run: () => graph?.fitView() },
-            { label: 'Kaart opnieuw ordenen', icon: 'undo', run: () => graph?.reflow() }
+            { label: t('graph.fit'), icon: 'fit', run: () => graph?.fitView() },
+            { label: t('graph.reflow'), icon: 'undo', run: () => graph?.reflow() }
           ]
     };
   }
@@ -294,7 +301,8 @@
     const result = await api<{ id: string }>(`/api/campaigns/${snapshot.campaign.id}/sessions`, {
       method: 'POST',
       body: JSON.stringify({
-        title: newSessionTitle || `Sessie ${snapshot.sessions.length + 1}`,
+        title:
+          newSessionTitle || t('session.defaultTitle', { number: snapshot.sessions.length + 1 }),
         worldDate: newSessionDate
       })
     });
@@ -324,14 +332,14 @@
       body: JSON.stringify(value)
     });
     await refresh();
-    notify(`Nodetype ${value.pluralName} toegevoegd.`);
+    notify(t('node.typeAdded', { name: value.pluralName }));
   }
   async function removeNodeType(key: string) {
     await api(`/api/campaigns/${snapshot.campaign.id}/types/${encodeURIComponent(key)}`, {
       method: 'DELETE'
     });
     await refresh();
-    notify('Nodetype verwijderd.');
+    notify(t('node.typeRemoved'));
   }
   async function changeView(userId: string | null) {
     const query = userId ? `?viewAs=${encodeURIComponent(userId)}` : '';
@@ -345,8 +353,8 @@
     replaceState(url, {});
     notify(
       userId
-        ? `Alleen-lezen: je bekijkt de wereld als ${snapshot.viewAs?.name}.`
-        : 'Spelleiderweergave actief.'
+        ? t('workspace.readonlyAs', { name: snapshot.viewAs?.name ?? '' })
+        : t('workspace.gmView')
     );
   }
   async function loadVersions() {
@@ -646,8 +654,8 @@
     }}
   />{/if}
 {#if sessionCreate}<Modal
-    title="Nieuwe sessie"
-    eyebrow="Een nieuw hoofdstuk"
+    title={t('session.newTitle')}
+    eyebrow={t('session.newEyebrow')}
     close={() => (sessionCreate = false)}
     ><form
       class="session-form"
@@ -659,13 +667,13 @@
       <input
         class="field serif-input"
         bind:value={newSessionTitle}
-        placeholder={`Sessie ${snapshot.sessions.length + 1} · Titel`}
+        placeholder={t('session.titlePlaceholder', { number: snapshot.sessions.length + 1 })}
         required
-      /><input class="field" bind:value={newSessionDate} placeholder="Datum in de spelwereld" />
+      /><input class="field" bind:value={newSessionDate} placeholder={t('session.worldDate')} />
       <div>
         <button type="button" class="ghost-button" onclick={() => (sessionCreate = false)}
-          >Annuleer</button
-        ><button class="primary-button">Sessie starten</button>
+          >{t('common.cancel')}</button
+        ><button class="primary-button">{t('session.start')}</button>
       </div>
     </form></Modal
   >{/if}

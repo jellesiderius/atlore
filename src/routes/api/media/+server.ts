@@ -4,6 +4,7 @@ import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
 import { media } from '$lib/server/db/schema';
 import { env } from '$lib/server/config';
+import { serverT } from '$lib/i18n/server';
 import { created, requireUser } from '$lib/server/http';
 import { requireRight } from '$lib/server/campaigns';
 import { putObject } from '$lib/server/storage';
@@ -16,11 +17,13 @@ export const POST: RequestHandler = async (event) => {
   const campaignId = String(form.get('campaignId') ?? '');
   const purpose = String(form.get('purpose') ?? 'image');
   const file = form.get('file');
-  if (!(file instanceof File) || !campaignId) error(422, 'Bestand of campagne ontbreekt.');
+  if (!(file instanceof File) || !campaignId) error(422, serverT('server.fileOrCampaignMissing'));
   await requireRight(campaignId, user.id, purpose === 'map' ? 'mapUpload' : 'image');
-  if (!ALLOWED.has(file.type)) error(415, 'Gebruik JPEG, PNG, WebP of GIF.');
+  if (!ALLOWED.has(file.type)) error(415, serverT('server.unsupportedImage'));
   const maxBytes = env.MAX_UPLOAD_MB * 1_048_576;
-  if (file.size > maxBytes) error(413, `Afbeeldingen mogen maximaal ${env.MAX_UPLOAD_MB} MB zijn.`);
+  if (file.size > maxBytes) {
+    error(413, serverT('server.imageTooLarge', { size: env.MAX_UPLOAD_MB }));
+  }
   const id = randomUUID();
   const extension = file.type === 'image/jpeg' ? 'jpg' : file.type.split('/')[1];
   const storageKey = `${campaignId}/${id}.${extension}`;

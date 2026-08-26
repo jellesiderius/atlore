@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { env } from '$lib/server/config';
+import { serverT } from '$lib/i18n/server';
 
 const transporter = env.SMTP_HOST
   ? nodemailer.createTransport({
@@ -20,9 +21,9 @@ export async function sendPasswordReset(email: string, token: string): Promise<v
   await transporter.sendMail({
     from: env.SMTP_FROM,
     to: email,
-    subject: 'Stel je Atlore-wachtwoord opnieuw in',
-    text: `Gebruik deze link om je wachtwoord opnieuw in te stellen: ${url.toString()}\n\nDe link verloopt over één uur.`,
-    html: `<p>Gebruik de onderstaande link om je Atlore-wachtwoord opnieuw in te stellen.</p><p><a href="${url.toString()}">Wachtwoord opnieuw instellen</a></p><p>De link verloopt over één uur.</p>`
+    subject: serverT('email.reset.subject'),
+    text: serverT('email.reset.text', { url: url.toString() }),
+    html: `<p>${serverT('email.reset.intro')}</p><p><a href="${url.toString()}">${serverT('email.reset.button')}</a></p><p>${serverT('email.reset.expiry')}</p>`
   });
 }
 
@@ -40,9 +41,9 @@ export async function sendInvitation(
   await transporter.sendMail({
     from: env.SMTP_FROM,
     to: email,
-    subject: `Uitnodiging voor ${campaignTitle} in Atlore`,
-    text: `Je bent uitgenodigd voor ${campaignTitle}. Accepteer via: ${url.toString()}`,
-    html: `<p>Je bent uitgenodigd voor <strong>${escapeHtml(campaignTitle)}</strong>.</p><p><a href="${url.toString()}">Uitnodiging accepteren</a></p>`
+    subject: serverT('email.invite.subject', { campaign: campaignTitle }),
+    text: serverT('email.invite.text', { campaign: campaignTitle, url: url.toString() }),
+    html: `<p>${serverT('email.invite.intro', { campaign: escapeHtml(campaignTitle) })}</p><p><a href="${url.toString()}">${serverT('email.invite.button')}</a></p>`
   });
 }
 

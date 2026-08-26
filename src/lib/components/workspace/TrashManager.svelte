@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { NodeType, SessionEntry, WorldNode } from '$lib/types';
+  import { nodeTypeLabel, t } from '$lib/i18n/index.svelte';
 
   let {
     nodes,
@@ -27,21 +28,28 @@
   let typeMap = $derived(new Map(types.map((type) => [type.key, type])));
 </script>
 
-<div class="eyebrow section-label">Prullenbak · {total}</div>
+<div class="eyebrow section-label">{t('trash.title')} · {total}</div>
 {#if !total}
-  <div class="empty">Leeg. Verwijderde nodes en sessies komen hier terecht.</div>
+  <div class="empty">{t('trash.emptyLong')}</div>
 {:else}
   <div class="trash-list">
     {#each trashedNodes as node}
       <div class="trash-row">
         <span class="dot" style:background={typeMap.get(node.type)?.colorDark}></span>
-        <span class="title"><b>{node.title}</b><small>{typeMap.get(node.type)?.one}</small></span>
-        <button onclick={() => restoreNode(node.id)}>Herstel</button>
+        <span class="title"
+          ><b>{node.title}</b><small
+            >{typeMap.get(node.type)
+              ? nodeTypeLabel(typeMap.get(node.type)!, 'singular')
+              : ''}</small
+          ></span
+        >
+        <button onclick={() => restoreNode(node.id)}>{t('common.restore')}</button>
         {#if canPurge}
           <button
             class="purge"
-            aria-label={`${node.title} definitief verwijderen`}
-            onclick={() => confirm(`${node.title} definitief verwijderen?`) && purgeNode(node.id)}
+            aria-label={t('trash.permanentlyDelete')}
+            onclick={() =>
+              confirm(t('trash.confirmNode', { title: node.title })) && purgeNode(node.id)}
             >×</button
           >
         {/if}
@@ -50,15 +58,18 @@
     {#each trashedSessions as session}
       <div class="trash-row">
         <span class="dot session"></span>
-        <span class="title"><b>{session.title}</b><small>Sessie {session.sequence}</small></span>
-        <button onclick={() => restoreSession(session.id)}>Herstel</button>
+        <span class="title"
+          ><b>{session.title}</b><small>{t('session.sequence', { number: session.sequence })}</small
+          ></span
+        >
+        <button onclick={() => restoreSession(session.id)}>{t('common.restore')}</button>
         {#if canPurge}
           <button
             class="purge"
-            aria-label={`${session.title} definitief verwijderen`}
+            aria-label={t('trash.permanentlyDelete')}
             onclick={() =>
-              confirm(`${session.title} definitief verwijderen?`) && purgeSession(session.id)}
-            >×</button
+              confirm(t('trash.confirmSession', { title: session.title })) &&
+              purgeSession(session.id)}>×</button
           >
         {/if}
       </div>

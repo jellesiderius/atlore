@@ -4,7 +4,9 @@
   import CampaignSettingsModal from '$lib/components/campaign/CampaignSettingsModal.svelte';
   import NewCampaignModal from '$lib/components/campaign/NewCampaignModal.svelte';
   import Starfield from '$lib/components/visual/Starfield.svelte';
+  import LanguageSwitcher from '$lib/components/ui/LanguageSwitcher.svelte';
   import { api } from '$lib/client/api';
+  import { t } from '$lib/i18n/index.svelte';
   import type { CampaignSummary, WorkspaceSnapshot } from '$lib/types';
   let {
     data
@@ -44,22 +46,26 @@
   }
 </script>
 
-<svelte:head><title>Campagnes · Atlore</title></svelte:head>
+<svelte:head><title>{t('campaigns.title')} · Atlore</title></svelte:head>
 <main class="gate">
   <Starfield />
   <div class="vignette"></div>
   <div class="account">
+    <LanguageSwitcher compact />
     <span style:border-color={data.user.color} style:color={data.user.color}
       >{data.user.name.slice(0, 1).toUpperCase()}</span
-    ><button class="ghost-button" onclick={logout}>Uitloggen</button>
+    ><button class="ghost-button" onclick={logout}>{t('campaigns.logout')}</button>
   </div>
   <section class="welcome">
     <div class="eyebrow">Atlore</div>
-    <h1 class="serif-title">Welkom terug,<br /><em>{data.user.name}</em></h1>
+    <h1 class="serif-title">{t('campaigns.welcome')}<br /><em>{data.user.name}</em></h1>
     <div class="divider-mark"><span></span></div>
     <p>
-      De ovens zijn koud. Je leidt {gmCount}
-      {gmCount === 1 ? 'campagne' : 'campagnes'} en speelt mee in {campaigns.length - gmCount}.
+      {t('campaigns.summary', {
+        gmCount,
+        campaignLabel: t(gmCount === 1 ? 'campaigns.campaign' : 'campaigns.campaigns'),
+        playerCount: campaigns.length - gmCount
+      })}
     </p>
   </section>
   <section class="cards">
@@ -69,14 +75,14 @@
         open={() => goto(`/campaigns/${campaign.id}`)}
         settings={() => openSettings(campaign.id)}
       />{/each}<button class="new-card" onclick={() => (showNew = true)}
-      ><span><b>+</b></span><strong>Nieuwe campagne</strong><small
-        >Een lege wereld, klaar voor<br />de eerste sessie</small
+      ><span><b>+</b></span><strong>{t('campaigns.new')}</strong><small
+        >{t('campaigns.newNote')}</small
       ></button
     >
   </section>
 </main>
 {#if showNew}<NewCampaignModal close={() => (showNew = false)} create={createCampaign} />{/if}
-{#if loadingSettings}<div class="loading" role="status">Instellingen laden…</div>{/if}
+{#if loadingSettings}<div class="loading" role="status">{t('campaigns.loadingSettings')}</div>{/if}
 {#if settings}<CampaignSettingsModal
     snapshot={settings}
     close={() => (settings = null)}

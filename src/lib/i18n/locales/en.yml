@@ -1,0 +1,482 @@
+language:
+  label: Language
+meta:
+  description: Atlore — the shared knowledge graph for your tabletop campaign.
+common:
+  atlore: Atlore
+  cancel: Cancel
+  close: Close
+  open: Open
+  save: Save
+  saving: Saving…
+  delete: Delete
+  remove: Remove
+  restore: Restore
+  search: Search
+  settings: Settings
+  loading: Loading…
+  upload: Uploading…
+  back: Back
+  yes: Yes
+  no: No
+  secret: secret
+  pinned: pinned
+  gameMaster: Game master
+  player: Player
+  node: Node
+  session: Session
+  story: Story
+  map: Map
+  graph: Graph
+  untitled: Untitled
+  none: None
+  personal: Personal
+  shared: Shared
+  edit: Edit
+  create: Create
+  add: Add
+  send: Send
+  unknownError: Something went wrong. Please try again.
+  undo: Undo
+auth:
+  email: Email address
+  password: Password
+  wait: Please wait…
+  login:
+    title: Sign in
+    heading: Welcome back
+    subheading: Sign in to continue where the table left off.
+    submit: Sign in
+    failed: Sign in failed.
+    forgot: Forgot password
+    noAccount: No account yet?
+    register: Sign up
+  register:
+    title: Create account
+    heading: Take a seat
+    subheading: Create an account and begin a world that grows with every story.
+    name: Name
+    namePlaceholder: What should we call you?
+    passwordPlaceholder: Password · at least 10 characters
+    submit: Create account
+    failed: Sign up failed.
+    existing: Already have an account?
+  forgot:
+    title: Forgot password
+    heading: Find the thread again
+    subheading: We will send you a one-time link to get back in.
+    failed: Request failed.
+    sending: Sending…
+    sent: Email sent
+    submit: Send recovery link
+    back: Back to sign in
+  reset:
+    title: New password
+    heading: Choose a new password
+    subheading: Choose something unique with at least ten characters.
+    newPassword: New password
+    repeatPassword: Repeat password
+    mismatch: The passwords do not match.
+    failed: Password reset failed.
+    submit: Save password
+  invite:
+    title: Invitation
+    heading: A seat is waiting
+    subheading: You have been invited to build a world together.
+    opening: Opening…
+    acceptAs: Accept as {{name}}
+    login: Sign in to accept
+    noAccount: No account yet?
+    create: Create one
+    failed: Accepting the invitation failed.
+campaigns:
+  title: Campaigns
+  logout: Sign out
+  welcome: Welcome back,
+  summary: The forges are cold. You lead {{gmCount}} {{campaignLabel}} and play in {{playerCount}}.
+  campaign: campaign
+  campaigns: campaigns
+  new: New campaign
+  newNote: An empty world, ready for the first session
+  loadingSettings: Loading settings…
+  defaultNote: A world waiting for the next story.
+  players: players
+  youAreGm: You are the game master
+  youPlay: You are playing
+  settingsFor: Settings for {{title}}
+  nodes: nodes
+  sessions: sessions
+  roleGm: Game master
+  rolePlayer: Player
+campaign:
+  new:
+    eyebrow: An empty world
+    title: New campaign
+    name: Name
+    namePlaceholder: Campaign name
+    system: Game system
+    otherSystem: Other
+    note: Short description
+    notePlaceholder: What is this world about?
+    hint: You will be the game master. You can invite others afterwards.
+    creating: Creating world…
+    submit: Begin
+    failed: Creating the campaign failed.
+  settings:
+    eyebrow: Campaign settings
+    deleteCampaign: Delete campaign
+    deleteConfirm: Move this campaign to the trash?
+    general: General
+    membersTab: Who is playing
+    rightsTab: Permissions
+    name: Name
+    system: System
+    description: Description
+    saveChanges: Save changes
+    members: Members
+    removeMember: Remove
+    invitePerson: Invite someone
+    optionalName: Name (optional)
+    invite: Invite
+    inviteEmail: Email address
+    standard: Standard
+    open: Open access
+    strict: Strict
+    rightsHint: The game master always has full access. These switches apply to players.
+    saveRights: Save permissions
+    saved: Saved.
+    saveFailed: Saving failed.
+    groups:
+      world: The world
+      sessions: Sessions
+      maps: Maps
+      secrets: Secrets
+      management: Management
+    rights:
+      create: Create nodes
+      edit: Edit nodes
+      link: Connect nodes
+      delete: Delete
+      image: Add images
+      write: Write sessions
+      session: Start sessions
+      history: Restore versions
+      mapUpload: Upload maps
+      pin: Place markers
+      reveal: Reveal and hide
+      seeSecret: View secrets
+      dmNotes: Read GM notes
+      invite: Invite people
+      settings: Change settings
+navigation:
+  label: Main views
+  graph: Graph
+  session: Session
+  story: Story
+  atlas: Map
+workspace:
+  togglePanel: Show or hide panel
+  backToCampaigns: Back to campaigns
+  viewingAs: Viewing as
+  view: View
+  viewAs: View campaign as
+  toggleTheme: Switch colour theme
+  readonlyAs: 'Read-only: you are viewing the world as {{name}}.'
+  gmView: Game master view active.
+  linkAdded: Connection created.
+  linkRemoved: Connection removed.
+  context:
+    connect: Connect to…
+    showGraph: Show in graph
+    trash: Move to trash
+    newHere: New node here
+graph:
+  ariaLabel: Interactive knowledge graph
+  fit: Fit all
+  reflow: Rearrange graph
+  addNode: Node
+  detailsFor: Details for {{title}}
+  noSummary: No summary yet.
+  hide: Hide
+  reveal: Reveal
+  connect: Connect to another node
+  showOnMap: Show on map
+  nodeAdded: Node added.
+node:
+  name: Node name
+  summary: Summary
+  summaryPlaceholder: One line about this node
+  type: Type
+  size: Size
+  visibility: Visibility
+  revealed: Revealed to players
+  connect: Connect
+  createTitle: New node
+  create: Create node
+  creating: Creating node…
+  overview: Overview
+  game: Game
+  relations: Relations
+  story: Story
+  notes: Notes
+  description: Description
+  image: Image
+  map: Map
+  stats: Attributes
+  gear: Gear
+  history: History
+  dossierClose: Close dossier
+  uploadImage: Upload image
+  uploadMap: Upload map
+  noRelations: No relations yet.
+  relatedSessions: Sessions containing this node
+  typeAdded: Node type {{name}} added.
+  typeRemoved: Node type removed.
+  saved: Saved
+  mentionHint: Type @ to create a link
+  addImage: Add image
+  everyone: Everyone
+  selected: Selected players
+  onlyMe: Only me
+  yourDescription: Your description
+  sharedAtTable: Shared with the table
+  privateForYou: Only for you
+  descriptionPlaceholder: What do you know about this node?
+  showOthers: Show what others wrote · {{count}}
+  newNote: New note…
+  addNote: Add
+  mapAvailable: This map is also available in the map view.
+  mapFor: A map for {{title}}
+  mapUploadHint: Upload an image and place nodes on it as markers.
+  statistics: Statistics
+  addRow: row
+  item: Item
+  note: Note
+  saveGame: Save game data
+  linked: Connected · {{count}}
+  unlink: Disconnect
+  connectSearch: Search to connect…
+  mentionedTogether: Mentioned together in sessions
+  notMentioned: Not mentioned in a session yet.
+  inStory: In the story · {{count}}
+  notInStory: This node has not appeared in the story yet.
+  postKind:
+    note: Note
+    theory: Theory
+    goal: Goal
+  postVisibility:
+    me: Only me
+    all: Everyone
+    gm: GM
+    sel: Selected players
+explorer:
+  label: Explorer panel
+  explorer: Explorer
+  recent: Recent
+  search: Search
+  settings: Settings
+  newNode: New node
+  closePanel: Close panel
+  empty: No nodes yet.
+  forces: Forces
+  repel: Repulsion
+  distance: Distance
+  grouping: Grouping
+  gravity: Gravity
+  linkLength: Link length
+  center: Centre
+  more: '{{count}} more · use search'
+  nothingOpened: Nothing opened yet.
+  searchPlaceholder: Search nodes…
+  nothingFound: Nothing found.
+  reflow: Rearrange graph
+  display: Display
+  lightTheme: Light theme
+  campaignSettings: Campaign settings
+search:
+  title: Search
+  placeholder: Search nodes, tags and summaries…
+  noResults: No results found.
+  close: Close search
+  worldPlaceholder: Search this world…
+  prompt: Type a name, place, quest or item.
+session:
+  defaultTitle: Session {{number}}
+  newTitle: New session
+  newEyebrow: A new chapter
+  titlePlaceholder: Session {{number}} · Title
+  start: Start session
+  title: Session title
+  notesForMentions: Notes for mentioned nodes
+  scratch: Personal session notes
+  noSession: Start a session to write together.
+  sequence: Session {{number}}
+  history: History
+  trash: Move to trash
+  worldDate: Date in the game world
+  editorPlaceholder: What happens at the table? Type @ to mention someone or something…
+  unconnected: From this session · not connected yet
+  connectAll: All {{count}}
+  privateNotes: Notes · only {{name}}
+  privateHint: Personal scratchpad; nobody else can see this.
+  privatePlaceholder: Personal notes…
+  relatedNotes: Notes for mentioned nodes
+  emptyHeading: The first page is blank
+  emptyText: Start a session and record what happens together.
+  first: Start first session
+story:
+  title: Ongoing story
+  empty: No completed sessions yet.
+  heading: Told at the table
+  count: '{{count}} sessions'
+  privateNotes: Notes · only {{name}}
+  noSessions: No sessions to tell yet.
+editor:
+  placeholder: Start writing…
+  ariaLabel: Text editor
+  secretNode: Secret node
+  secret: secret
+  openNode: Open {{title}}
+  connectTo: Connect to {{title}}
+  newNode: 'New: {{title}}'
+  noResults: No results
+atlas:
+  fit: Fit map
+  zoomIn: Zoom in
+  zoomOut: Zoom out
+  upload: Upload map
+  mapOf: Map of {{title}}
+  lockMarker: Lock marker
+  unlockMarker: Unlock marker
+  removeMarker: Remove from map
+  empty: Upload a map to place locations.
+  ariaLabel: Interactive campaign map
+  emptyHeading: Put the world on the table
+  emptyText: Upload a map and drag nodes from the explorer to their location.
+  openDossier: Open dossier
+  release: Release
+  lock: Lock
+  remove: Remove from map
+connection:
+  title: Connect to {{title}}
+  eyebrow: Create connections
+  placeholder: Search nodes…
+  noResults: No other nodes found.
+  hint: Keep selecting nodes; this window stays open.
+createNode:
+  eyebrow: Expand the world
+  title: New node
+  name: Name
+  connect: Connect directly to
+  searchMultiple: Search nodes… multiple allowed
+  visible: Visible to
+  everyone: Everyone
+  selected: Selected players
+  onlyMe: Only me
+  adding: Adding…
+  add: Add
+trash:
+  title: Trash
+  empty: The trash is empty.
+  emptyLong: Empty. Deleted nodes and sessions will appear here.
+  permanentlyDelete: Delete permanently
+  confirmNode: Permanently delete {{title}}?
+  confirmSession: Permanently delete {{title}}?
+history:
+  title: Version history
+  restore: Restore this version
+  empty: No versions available yet.
+  eyebrow: History
+  loading: Loading…
+  restoreShort: Restore
+  tooLong: This version is too long for a word comparison; you can still restore it.
+  pick: Select a version on the left.
+nodeTypeManager:
+  title: Node types · {{count}}
+  ownType: Custom type
+  addFailed: Adding the type failed.
+  removeLabel: Remove {{name}}
+  removeConfirm: Remove type {{name}}?
+  singularPlaceholder: Singular, e.g. Ship
+  pluralPlaceholder: Plural, e.g. Ships
+  color: Colour {{color}}
+  adding: Adding…
+  add: Add type
+nodeTypes:
+  faction: { plural: Factions, singular: Faction }
+  building: { plural: Buildings, singular: Building }
+  deity: { plural: Deities, singular: Deity }
+  location: { plural: Locations, singular: Location }
+  lore: { plural: Lore, singular: Lore }
+  monster: { plural: Monsters, singular: Monster }
+  npc: { plural: NPCs, singular: NPC }
+  character: { plural: Characters, singular: Character }
+  quest: { plural: Quests, singular: Quest }
+  item: { plural: Items, singular: Item }
+  region: { plural: Regions, singular: Region }
+  session: { plural: Sessions, singular: Session }
+server:
+  invalidOrigin: Invalid request origin.
+  loginRequired: Sign in to continue.
+  invalidJson: Invalid JSON.
+  invalidInput: Invalid input.
+  validEmail: Enter a valid email address.
+  nameMin: Enter at least 2 characters.
+  passwordMin: Use at least 10 characters.
+  tooManyMinutes: Too many attempts. Try again in a few minutes.
+  tooManyLater: Too many attempts. Try again later.
+  loginFailed: The email address or password is incorrect.
+  accountExists: An account with this email address already exists.
+  resetExpired: This recovery link has expired or has already been used.
+  recoverySent: If this account exists, the recovery email is on its way.
+  campaignNotFound: Campaign not found.
+  forbidden: You do not have permission to do this.
+  deleteCampaignGmOnly: Only a game master can delete a campaign.
+  campaignNeedsGm: This campaign has no game master.
+  viewAsGmOnly: Only a game master can view the world as another player.
+  playerNotFound: Player not found.
+  invitationExpired: This invitation has expired or has already been used.
+  rolesGmOnly: Only a game master can change roles.
+  promoteOtherGm: Make someone else a game master first.
+  cannotRemovePlayer: You cannot remove this player.
+  invalidNodeType: Invalid node type.
+  purgeGmOnly: Only a game master can permanently delete items.
+  trashNodeFirst: Move the node to the trash first.
+  selfLink: A node cannot connect to itself.
+  linkNotFound: Connection not found.
+  trashSessionFirst: Move the session to the trash first.
+  nodeTypeExists: A node type with this name already exists.
+  builtinType: Built-in types cannot be removed.
+  typeInUse: This type is still used by nodes.
+  versionNotFound: Version not found.
+  nodeNotFound: Node not found.
+  someNodesNotFound: One of the nodes does not exist.
+  sessionNotFound: Session not found.
+  fileOrCampaignMissing: File or campaign is missing.
+  unsupportedImage: Use JPEG, PNG, WebP or GIF.
+  imageTooLarge: Images may be up to {{size}} MB.
+  imageNotFound: Image not found.
+  imageMissingFromStorage: Image is missing from storage.
+  invalidVersionQuery: Invalid version query.
+  versionMissing: Version is missing.
+  invitationTokenMissing: Invitation token is missing.
+  resetTokenMissing: Recovery token is missing.
+email:
+  reset:
+    subject: Reset your Atlore password
+    text: |-
+      Use this link to reset your password: {{url}}
+
+      The link expires in one hour.
+    intro: Use the link below to reset your Atlore password.
+    button: Reset password
+    expiry: The link expires in one hour.
+  invite:
+    subject: Invitation to {{campaign}} in Atlore
+    text: 'You have been invited to {{campaign}}. Accept via: {{url}}'
+    intro: You have been invited to <strong>{{campaign}}</strong>.
+    button: Accept invitation
+errors:
+  saveFailed: Saving failed.
+  createFailed: Creating failed.
+  uploadFailed: Uploading failed.

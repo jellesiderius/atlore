@@ -2,6 +2,7 @@
   import Icon from '$lib/components/ui/Icon.svelte';
   import { tooltip } from '$lib/actions/tooltip';
   import type { Campaign, MediaAsset, NodeType, WorldNode } from '$lib/types';
+  import { t } from '$lib/i18n/index.svelte';
   let {
     campaign,
     nodes,
@@ -130,25 +131,25 @@
         panX = 0;
         panY = 0;
       }}
-      aria-label="Kaart passend"
-      use:tooltip={'Kaart passend'}><Icon name="fit" size={16} /></button
+      aria-label={t('atlas.fit')}
+      use:tooltip={t('atlas.fit')}><Icon name="fit" size={16} /></button
     >
     <div class="zoom">
       <button
         onclick={() => (zoom = Math.max(0.3, zoom - 0.2))}
-        aria-label="Uitzoomen"
-        use:tooltip={'Uitzoomen'}>−</button
+        aria-label={t('atlas.zoomOut')}
+        use:tooltip={t('atlas.zoomOut')}>−</button
       ><b>{Math.round(zoom * 100)}%</b><button
         onclick={() => (zoom = Math.min(5, zoom + 0.2))}
-        aria-label="Inzoomen"
-        use:tooltip={'Inzoomen'}>+</button
+        aria-label={t('atlas.zoomIn')}
+        use:tooltip={t('atlas.zoomIn')}>+</button
       >
     </div>
   </header>
   <div
     class="viewport"
     role="application"
-    aria-label="Interactieve campagnekaart"
+    aria-label={t('atlas.ariaLabel')}
     onwheel={wheel}
     onpointerdown={down}
     onpointermove={move}
@@ -164,7 +165,7 @@
       >
         <img
           src={asset.url}
-          alt={`Kaart van ${mapOwner?.title ?? campaign.title}`}
+          alt={t('atlas.mapOf', { title: mapOwner?.title ?? campaign.title })}
           draggable="false"
         />{#each markers as node}<button
             class="marker"
@@ -189,10 +190,10 @@
           >{/each}
       </div>{:else}<div class="upload-empty">
         <Icon name="atlas" size={42} />
-        <h2 class="serif-title">Leg de wereld op tafel</h2>
-        <p>Upload een kaart en sleep nodes uit de explorer naar hun plek.</p>
+        <h2 class="serif-title">{t('atlas.emptyHeading')}</h2>
+        <p>{t('atlas.emptyText')}</p>
         {#if canUpload}<label class="primary-button"
-            >{busy ? 'Uploaden…' : 'Kaart uploaden'}<input
+            >{busy ? t('common.upload') : t('atlas.upload')}<input
               type="file"
               accept="image/jpeg,image/png,image/webp,image/gif"
               onchange={picked}
@@ -210,7 +211,7 @@
       onclick={() => {
         openNode(context!.node.id);
         context = null;
-      }}><Icon name="session" size={14} />Dossier openen</button
+      }}><Icon name="session" size={14} />{t('atlas.openDossier')}</button
     ><button
       onclick={async () => {
         await pinNode(context!.node.id, { markerLocked: !context!.node.markerLocked });
@@ -218,14 +219,14 @@
       }}
       ><Icon name={context.node.markerLocked ? 'unlock' : 'lock'} size={14} />{context.node
         .markerLocked
-        ? 'Losmaken'
-        : 'Vastzetten'}</button
+        ? t('atlas.release')
+        : t('atlas.lock')}</button
     ><button
       class="danger"
       onclick={async () => {
         await pinNode(context!.node.id, { pinX: null, pinY: null, pinMapId: null });
         context = null;
-      }}><Icon name="trash" size={14} />Van kaart halen</button
+      }}><Icon name="trash" size={14} />{t('atlas.remove')}</button
     >
   </div>{/if}
 

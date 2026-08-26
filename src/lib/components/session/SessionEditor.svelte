@@ -12,6 +12,7 @@
     WorldLink,
     WorldNode
   } from '$lib/types';
+  import { t } from '$lib/i18n/index.svelte';
   let {
     session,
     sessions,
@@ -89,7 +90,7 @@
     flash();
   }
   function flash() {
-    saved = 'Opgeslagen';
+    saved = t('node.saved');
     setTimeout(() => (saved = ''), 1600);
   }
   function buildPairs(ids: string[], linked: Set<string>) {
@@ -108,32 +109,34 @@
       onchange={(event) => pick(event.currentTarget.value)}
       disabled={!sessions.length}
       >{#each sessions.filter((item) => !item.trashedAt) as item}<option value={item.id}
-          >Sessie {item.sequence} · {item.title}</option
+          >{t('session.sequence', { number: item.sequence })} · {item.title}</option
         >{/each}</select
-    >{#if session && canHistory}<button class="icon-button" title="Geschiedenis" onclick={history}
-        ><Icon name="clock" size={16} /></button
+    >{#if session && canHistory}<button
+        class="icon-button"
+        title={t('session.history')}
+        onclick={history}><Icon name="clock" size={16} /></button
       >{/if}{#if session && canDelete}<button
         class="icon-button trash"
-        title="Naar prullenbak"
+        title={t('session.trash')}
         onclick={trash}><Icon name="trash" size={16} /></button
       >{/if}<span>{saved}</span>{#if canStart}<button
         class="primary-button start"
-        onclick={createSession}><Icon name="plus" size={15} /> Sessie starten</button
+        onclick={createSession}><Icon name="plus" size={15} /> {t('session.start')}</button
       >{/if}
   </header>
   {#if session}<div class="scroll">
       <article>
         <div class="session-meta">
-          <span class="eyebrow">Sessie {session.sequence}</span><input
+          <span class="eyebrow">{t('session.sequence', { number: session.sequence })}</span><input
             bind:value={worldDate}
             disabled={!canWrite}
-            placeholder="Datum in de spelwereld"
+            placeholder={t('session.worldDate')}
             onblur={headerSave}
           />
         </div>
         <input
           class="title serif-title"
-          aria-label="Sessietitel"
+          aria-label={t('session.title')}
           bind:value={title}
           disabled={!canWrite}
           onblur={headerSave}
@@ -142,17 +145,17 @@
           {nodes}
           {types}
           readonly={!canWrite}
-          placeholder="Wat gebeurt er aan tafel? Typ @ om iemand of iets te noemen…"
+          placeholder={t('session.editorPlaceholder')}
           onChange={saveBody}
           {openNode}
           createNode={createMention}
         />
         {#if canLink && pairs.length}<section class="suggestions">
             <header>
-              <span class="eyebrow">Uit deze sessie · nog niet verbonden</span><button
+              <span class="eyebrow">{t('session.unconnected')}</span><button
                 onclick={async () => {
                   for (const [a, b] of pairs) await connect(a, b);
-                }}>Alle {pairs.length}</button
+                }}>{t('session.connectAll', { count: pairs.length })}</button
               >
             </header>
             <div>
@@ -170,8 +173,8 @@
           <div class="scratch-head">
             <span style:background="var(--ember)"></span>
             <div>
-              <div class="eyebrow">Aantekeningen · alleen {currentUserName}</div>
-              <small>Persoonlijk klad, niemand anders ziet dit.</small>
+              <div class="eyebrow">{t('session.privateNotes', { name: currentUserName })}</div>
+              <small>{t('session.privateHint')}</small>
             </div>
           </div>
           <RichTextEditor
@@ -179,14 +182,14 @@
             {nodes}
             {types}
             readonly={!canWrite}
-            placeholder="Eigen aantekeningen…"
+            placeholder={t('session.privatePlaceholder')}
             onChange={saveNotes}
             {openNode}
             createNode={createMention}
           />
         </section>
         {#if relatedPosts.length}<section class="related-notes">
-            <div class="eyebrow">Notities bij genoemde nodes</div>
+            <div class="eyebrow">{t('session.relatedNotes')}</div>
             {#each relatedPosts as post}{@const node = nodes.find(
                 (item) => item.id === post.nodeId
               )}<button onclick={() => node && openNode(node.id)}
@@ -196,16 +199,16 @@
                   <b>{node?.title}</b>
                   <p>{post.text}</p>
                 </div>
-                <small>{post.kind}</small></button
+                <small>{t(`node.postKind.${post.kind}`)}</small></button
               >{/each}
           </section>{/if}
       </article>
     </div>{:else}<div class="empty">
       <Icon name="session" size={38} />
-      <h2 class="serif-title">De eerste bladzijde is leeg</h2>
-      <p>Start een sessie en leg samen vast wat er gebeurt.</p>
+      <h2 class="serif-title">{t('session.emptyHeading')}</h2>
+      <p>{t('session.emptyText')}</p>
       {#if canStart}<button class="primary-button" onclick={createSession}
-          >+ Eerste sessie starten</button
+          >+ {t('session.first')}</button
         >{/if}
     </div>{/if}
 </section>

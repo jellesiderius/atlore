@@ -3,6 +3,7 @@
   import Icon from '$lib/components/ui/Icon.svelte';
   import { tooltip } from '$lib/actions/tooltip';
   import type { MediaAsset, NodeType, WorldNode } from '$lib/types';
+  import { nodeTypeLabel, t } from '$lib/i18n/index.svelte';
 
   let {
     node,
@@ -59,7 +60,7 @@
   <div
     class="popover"
     role="dialog"
-    aria-label={`Details van ${node.title}`}
+    aria-label={t('graph.detailsFor', { title: node.title })}
     style:--node-color={type?.colorDark ?? 'var(--text-3)'}
     style:left={`${left}px`}
     style:top={`${top}px`}
@@ -69,38 +70,43 @@
     <div class="meta-row">
       <span class="type-dot"></span>
       <span
-        >{type?.one ?? node.type}{#if node.pinned}
-          · vast{/if}</span
+        >{type ? nodeTypeLabel(type, 'singular') : node.type}{#if node.pinned}
+          · {t('common.pinned')}{/if}</span
       >
-      {#if !node.revealed}<em>✦ geheim</em>{/if}
-      <button class="close" onclick={close} aria-label="Sluiten" use:tooltip={'Sluiten'}
-        ><Icon name="close" size={13} /></button
+      {#if !node.revealed}<em>✦ {t('common.secret')}</em>{/if}
+      <button
+        class="close"
+        onclick={close}
+        aria-label={t('common.close')}
+        use:tooltip={t('common.close')}><Icon name="close" size={13} /></button
       >
     </div>
     <h3 class="serif-title">{node.title}</h3>
-    <p class:empty={!node.summary}>{node.summary || 'Nog geen samenvatting.'}</p>
+    <p class:empty={!node.summary}>{node.summary || t('graph.noSummary')}</p>
     {#if node.tags.length}<div class="tags">
         {#each node.tags as tag}<span>{tag}</span>{/each}
       </div>{/if}
     <div class="spacer"></div>
     <div class="actions">
-      <button class="open" onclick={open}><Icon name="session" size={14} />Openen</button>
+      <button class="open" onclick={open}
+        ><Icon name="session" size={14} />{t('common.open')}</button
+      >
       {#if canReveal}<button class:revealed={!node.revealed} onclick={toggleReveal}
           ><Icon name={node.revealed ? 'eye-off' : 'eye'} size={14} />{node.revealed
-            ? 'Verberg'
-            : 'Onthul'}</button
+            ? t('graph.hide')
+            : t('graph.reveal')}</button
         >{/if}
       {#if canLink}<button
           class="icon-action"
           onclick={connect}
-          aria-label="Verbinden met een andere node"
-          use:tooltip={'Verbinden met een andere node'}><Icon name="link" size={15} /></button
+          aria-label={t('graph.connect')}
+          use:tooltip={t('graph.connect')}><Icon name="link" size={15} /></button
         >{/if}
       {#if node.pinX !== null && node.pinY !== null}<button
           class="icon-action"
           onclick={showAtlas}
-          aria-label="Tonen op de kaart"
-          use:tooltip={'Tonen op de kaart'}><Icon name="atlas" size={15} /></button
+          aria-label={t('graph.showOnMap')}
+          use:tooltip={t('graph.showOnMap')}><Icon name="atlas" size={15} /></button
         >{/if}
     </div>
   </div>

@@ -2,6 +2,7 @@
   import Icon from '$lib/components/ui/Icon.svelte';
   import { tooltip } from '$lib/actions/tooltip';
   import type { CampaignSummary } from '$lib/types';
+  import { t } from '$lib/i18n/index.svelte';
   let {
     campaign,
     index = 0,
@@ -24,11 +25,11 @@
     ></span>
     <span class="system">{campaign.system}</span><span class="title serif-title"
       >{campaign.title}</span
-    ><span class="note">{campaign.note || 'Een wereld die wacht op het volgende verhaal.'}</span>
+    ><span class="note">{campaign.note || t('campaigns.defaultNote')}</span>
     <span class="stats"
-      ><span><b>{campaign.sessionCount}</b><small>sessies</small></span><span
-        ><b>{campaign.nodeCount}</b><small>nodes</small></span
-      ><span><b>{campaign.memberCount}</b><small>spelers</small></span></span
+      ><span><b>{campaign.sessionCount}</b><small>{t('campaigns.sessions')}</small></span><span
+        ><b>{campaign.nodeCount}</b><small>{t('campaigns.nodes')}</small></span
+      ><span><b>{campaign.memberCount}</b><small>{t('campaigns.players')}</small></span></span
     >
     <span class="footer"
       ><span class="people"
@@ -36,13 +37,13 @@
             style:border-color={person.color}
             style:color={person.color}>{person.name.slice(0, 1).toUpperCase()}</span
           >{/each}</span
-      ><em>{campaign.role === 'gm' ? 'Jij bent spelleider' : 'Jij speelt mee'}</em></span
+      ><em>{t(campaign.role === 'gm' ? 'campaigns.youAreGm' : 'campaigns.youPlay')}</em></span
     >
   </button>
   <button
     class="settings icon-button"
-    aria-label={`Instellingen voor ${campaign.title}`}
-    use:tooltip={`Instellingen voor ${campaign.title}`}
+    aria-label={t('campaigns.settingsFor', { title: campaign.title })}
+    use:tooltip={t('campaigns.settingsFor', { title: campaign.title })}
     onclick={(event) => {
       event.stopPropagation();
       settings();

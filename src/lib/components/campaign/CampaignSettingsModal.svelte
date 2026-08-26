@@ -2,6 +2,7 @@
   import Modal from '$lib/components/ui/Modal.svelte';
   import { DEFAULT_RIGHTS, OPEN_RIGHTS, STRICT_RIGHTS } from '$lib/domain/constants';
   import type { RightKey, Rights, WorkspaceSnapshot } from '$lib/types';
+  import { t } from '$lib/i18n/index.svelte';
   let {
     snapshot,
     close,
@@ -34,43 +35,43 @@
   let message = $state('');
   const groups: [string, [RightKey, string][]][] = [
     [
-      'De wereld',
+      'world',
       [
-        ['create', 'Nodes aanmaken'],
-        ['edit', 'Nodes bewerken'],
-        ['link', 'Nodes koppelen'],
-        ['delete', 'Verwijderen'],
-        ['image', 'Afbeeldingen toevoegen']
+        ['create', 'create'],
+        ['edit', 'edit'],
+        ['link', 'link'],
+        ['delete', 'delete'],
+        ['image', 'image']
       ]
     ],
     [
-      'Sessies',
+      'sessions',
       [
-        ['write', 'Sessies schrijven'],
-        ['session', 'Sessies starten'],
-        ['history', 'Versies terugzetten']
+        ['write', 'write'],
+        ['session', 'session'],
+        ['history', 'history']
       ]
     ],
     [
-      'Kaarten',
+      'maps',
       [
-        ['mapUpload', 'Kaarten uploaden'],
-        ['pin', 'Markers plaatsen']
+        ['mapUpload', 'mapUpload'],
+        ['pin', 'pin']
       ]
     ],
     [
-      'Geheimen',
+      'secrets',
       [
-        ['reveal', 'Onthullen en verbergen'],
-        ['seeSecret', 'Geheimen inzien'],
-        ['dmNotes', 'DM-notities lezen']
+        ['reveal', 'reveal'],
+        ['seeSecret', 'seeSecret'],
+        ['dmNotes', 'dmNotes']
       ]
     ],
     [
-      'Beheer',
+      'management',
       [
-        ['invite', 'Mensen uitnodigen'],
-        ['settings', 'Instellingen wijzigen']
+        ['invite', 'invite'],
+        ['settings', 'settings']
       ]
     ]
   ];
@@ -79,9 +80,9 @@
     message = '';
     try {
       await run();
-      message = 'Opgeslagen.';
+      message = t('campaign.settings.saved');
     } catch (cause) {
-      message = cause instanceof Error ? cause.message : 'Opslaan is mislukt.';
+      message = cause instanceof Error ? cause.message : t('campaign.settings.saveFailed');
     } finally {
       busy = false;
     }
@@ -91,31 +92,33 @@
   }
 </script>
 
-<Modal title={snapshot.campaign.title} eyebrow="Campagne-instellingen" {close} wide>
+<Modal title={snapshot.campaign.title} eyebrow={t('campaign.settings.eyebrow')} {close} wide>
   <div class="tabs">
-    {#each [['general', 'Algemeen'], ['members', 'Wie speelt mee'], ['rights', 'Rechten']] as item}<button
+    {#each [['general', 'campaign.settings.general'], ['members', 'campaign.settings.membersTab'], ['rights', 'campaign.settings.rightsTab']] as item}<button
         class:active={tab === item[0]}
-        onclick={() => (tab = item[0] as typeof tab)}>{item[1]}</button
+        onclick={() => (tab = item[0] as typeof tab)}>{t(item[1])}</button
       >{/each}
   </div>
   {#if tab === 'general'}
     <div class="form-grid">
-      <label>Naam<input class="field" bind:value={title} /></label><label
-        >Systeem<input class="field" bind:value={system} /></label
+      <label>{t('campaign.settings.name')}<input class="field" bind:value={title} /></label><label
+        >{t('campaign.settings.system')}<input class="field" bind:value={system} /></label
       ><label class="full"
-        >Omschrijving<textarea class="field" rows="4" bind:value={note}></textarea></label
+        >{t('campaign.settings.description')}<textarea class="field" rows="4" bind:value={note}
+        ></textarea></label
       >
     </div>
     <div class="bottom">
       <button
         class="danger-button"
         disabled={snapshot.campaign.role !== 'gm' || busy}
-        onclick={() => confirm('Deze campagne naar de prullenbak verplaatsen?') && wrap(destroy)}
-        >Campagne verwijderen</button
+        onclick={() => confirm(t('campaign.settings.deleteConfirm')) && wrap(destroy)}
+        >{t('campaign.settings.deleteCampaign')}</button
       ><button
         class="primary-button"
         disabled={busy}
-        onclick={() => wrap(() => save({ title, system, note }))}>Wijzigingen opslaan</button
+        onclick={() => wrap(() => save({ title, system, note }))}
+        >{t('campaign.settings.saveChanges')}</button
       >
     </div>
   {:else if tab === 'members'}
@@ -134,10 +137,12 @@
                   (event.currentTarget as HTMLSelectElement).value as 'gm' | 'player'
                 )
               )}
-            ><option value="gm">Spelleider</option><option value="player">Speler</option></select
+            ><option value="gm">{t('common.gameMaster')}</option><option value="player"
+              >{t('common.player')}</option
+            ></select
           >{#if member.id !== snapshot.currentUser.id && snapshot.campaign.role === 'gm'}<button
               class="icon-remove"
-              aria-label="Verwijderen"
+              aria-label={t('campaign.settings.removeMember')}
               onclick={() => wrap(() => remove(member.id))}>×</button
             >{/if}
         </div>{/each}
@@ -153,42 +158,53 @@
         });
       }}
     >
-      <div class="eyebrow">Iemand uitnodigen</div>
+      <div class="eyebrow">{t('campaign.settings.invitePerson')}</div>
       <div>
-        <input class="field" bind:value={inviteName} placeholder="Naam (optioneel)" /><input
+        <input
+          class="field"
+          bind:value={inviteName}
+          placeholder={t('campaign.settings.optionalName')}
+        /><input
           class="field"
           type="email"
           bind:value={email}
-          placeholder="E-mailadres"
+          placeholder={t('campaign.settings.inviteEmail')}
           required
-        /><button class="primary-button" disabled={busy}>Uitnodigen</button>
+        /><button class="primary-button" disabled={busy}>{t('campaign.settings.invite')}</button>
       </div>
     </form>
   {:else}
     <div class="presets">
-      <button onclick={() => preset(DEFAULT_RIGHTS)}>Standaard</button><button
-        onclick={() => preset(OPEN_RIGHTS)}>Alles open</button
-      ><button onclick={() => preset(STRICT_RIGHTS)}>Streng</button>
+      <button onclick={() => preset(DEFAULT_RIGHTS)}>{t('campaign.settings.standard')}</button
+      ><button onclick={() => preset(OPEN_RIGHTS)}>{t('campaign.settings.open')}</button><button
+        onclick={() => preset(STRICT_RIGHTS)}>{t('campaign.settings.strict')}</button
+      >
     </div>
-    <p class="hint">De spelleider mag altijd alles. Deze schakelaars gelden voor spelers.</p>
+    <p class="hint">{t('campaign.settings.rightsHint')}</p>
     <div class="rights">
       {#each groups as [group, items]}<section>
-          <div class="eyebrow">{group}</div>
+          <div class="eyebrow">{t(`campaign.settings.groups.${group}`)}</div>
           {#each items as [key, label]}<button
               class="right-row"
               onclick={() => (rights[key] = !rights[key])}
-              ><span>{label}</span><span class:on={rights[key]} class="switch"><i></i></span
+              ><span>{t(`campaign.settings.rights.${label}`)}</span><span
+                class:on={rights[key]}
+                class="switch"><i></i></span
               ></button
             >{/each}
         </section>{/each}
     </div>
     <div class="bottom right">
       <button class="primary-button" disabled={busy} onclick={() => wrap(() => save({ rights }))}
-        >Rechten opslaan</button
+        >{t('campaign.settings.saveRights')}</button
       >
     </div>
   {/if}
-  {#if message}<div class:bad={!message.includes('Opgeslagen')} class="message" role="status">
+  {#if message}<div
+      class:bad={message !== t('campaign.settings.saved')}
+      class="message"
+      role="status"
+    >
       {message}
     </div>{/if}
 </Modal>

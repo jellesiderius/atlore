@@ -66,6 +66,7 @@ src/
 │   ├── ui/            modals, iconen, menu's en meldingen
 │   └── workspace/     navigatie, zoeken, historie en beheer
 ├── lib/domain/        pure, geteste zoek-, ACL-, tekst- en diff-logica
+├── lib/i18n/          snippetcatalogi, locale-state en serververtalingen
 ├── lib/server/        auth, configuratie, database, mail, storage en services
 ├── routes/api/        gevalideerde SvelteKit JSON-endpoints
 └── workers/           force-layout buiten de hoofdthread
@@ -74,6 +75,7 @@ src/
 De stack bestaat uit:
 
 - SvelteKit 2 + Svelte 5, TypeScript, Vite en Tailwind CSS 4;
+- YML-snippets voor Nederlandse en Engelse interface-, API- en e-mailteksten;
 - PostgreSQL 17 met Drizzle ORM en versioneerbare SQL-migraties;
 - Redis voor rate limiting en realtime invalidaties;
 - WebSockets voor updates tussen gelijktijdige campagnegebruikers;
@@ -98,6 +100,29 @@ Composer is bewust niet opgenomen: Atlore bevat geen PHP-runtime of PHP-packages
 - prullenbak voor nodes en sessies, inclusief herstel en definitief verwijderen;
 - GM-weergave als speler, server-side gefilterd en in de UI alleen-lezen;
 - realtime refresh, dark/light mode, responsive mobiele navigatie en PWA-cache.
+
+## Vertalingen en snippets
+
+Alle interface-, fout- en e-mailteksten staan per taal in `src/lib/i18n/locales/nl.yml` en `src/lib/i18n/locales/en.yml`. Nederlands is de standaardtaal. De taalkeuze wordt in `localStorage` én de cookie `atlore_locale` bewaard, zodat zowel Svelte-componenten als serverresponses en e-mails dezelfde taal gebruiken.
+
+Voeg een tekst in beide YML-bestanden onder dezelfde semantische sleutel toe:
+
+```yml
+campaign:
+  welcome: Welkom in {{title}}
+```
+
+Gebruik de snippet vervolgens in een component:
+
+```svelte
+<script lang="ts">
+  import { t } from '$lib/i18n/index.svelte';
+</script>
+
+<h1>{t('campaign.welcome', { title: campaign.title })}</h1>
+```
+
+Servercode gebruikt `serverT()` uit `src/lib/i18n/server.ts`. De unit-tests controleren automatisch dat beide catalogi dezelfde sleutels en interpolatievelden bevatten en dat alle statisch gebruikte `t('…')`-sleutels bestaan.
 
 ## Configuratie
 

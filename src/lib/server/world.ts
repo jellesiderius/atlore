@@ -1,5 +1,6 @@
 import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
+import { serverT } from '$lib/i18n/server';
 import { bodyToText, normalizeBody, referencedNodeIds } from '$lib/domain/text';
 import { canSeeNode } from '$lib/domain/permissions';
 import { db } from '$lib/server/db';
@@ -38,7 +39,7 @@ export async function createNode(campaignId: string, user: SessionUser, input: N
     .from(nodeTypes)
     .where(and(eq(nodeTypes.campaignId, campaignId), eq(nodeTypes.key, input.type)))
     .limit(1);
-  if (!type || type.key === 'session') error(422, 'Ongeldig nodetype.');
+  if (!type || type.key === 'session') error(422, serverT('server.invalidNodeType'));
   await assertVisibleNodeIds(campaignId, [...new Set(input.connectTo)], user.id, membership);
   const node = await db.transaction(async (tx) => {
     const playerPrivate =
@@ -101,7 +102,7 @@ export async function updateNode(
       .from(nodeTypes)
       .where(and(eq(nodeTypes.campaignId, campaignId), eq(nodeTypes.key, String(values.type))))
       .limit(1);
-    if (!type || type.key === 'session') error(422, 'Ongeldig nodetype.');
+    if (!type || type.key === 'session') error(422, serverT('server.invalidNodeType'));
   }
   if (values.trashed !== undefined) {
     if (values.trashed) await requireRight(campaignId, user.id, 'delete');
@@ -132,9 +133,9 @@ export async function updateNode(
 
 export async function purgeNode(campaignId: string, nodeId: string, userId: string): Promise<void> {
   const membership = await requireMembership(campaignId, userId);
-  if (membership.role !== 'gm') error(403, 'Alleen een spelleider kan definitief verwijderen.');
+  if (membership.role !== 'gm') error(403, serverT('server.purgeGmOnly'));
   const node = await getNodeRow(campaignId, nodeId);
-  if (!node.trashedAt) error(409, 'Zet de node eerst in de prullenbak.');
+  if (!node.trashedAt) error(409, serverT('server.trashNodeFirst'));
   await db.delete(nodes).where(eq(nodes.id, nodeId));
   await log(campaignId, userId, 'node.purged', 'node', nodeId);
   await invalidateCampaign(campaignId, 'nodes');
@@ -178,7 +179,7 @@ export async function connectNodes(
   target: string
 ) {
   const membership = await requireRight(campaignId, userId, 'link');
-  if (source === target) error(422, 'Een node kan niet met zichzelf verbinden.');
+  if (source === target) error(422, serverT('server.selfLink'));
   await assertVisibleNodeIds(campaignId, [source, target], userId, membership);
   const [sourceId, targetId] = canonicalPair(source, target);
   const [link] = await db
@@ -210,7 +211,7 @@ export async function disconnectNodes(campaignId: string, linkId: string, userId
     .from(links)
     .where(and(eq(links.id, linkId), eq(links.campaignId, campaignId)))
     .limit(1);
-  if (!link) error(404, 'Koppeling niet gevonden.');
+  if (!link) error(404, serverT('server.linkNotFound'));
   await assertVisibleNodeIds(campaignId, [link.sourceId, link.targetId], userId, membership);
   await db.transaction(async (tx) => {
     await tx.delete(links).where(eq(links.id, linkId));
@@ -297,9 +298,9 @@ export async function purgeSession(
   userId: string
 ): Promise<void> {
   const membership = await requireMembership(campaignId, userId);
-  if (membership.role !== 'gm') error(403, 'Alleen een spelleider kan definitief verwijderen.');
+  if (membership.role !== 'gm') error(403, serverT('server.purgeGmOnly'));
   const session = await getSessionRow(campaignId, sessionId);
-  if (!session.trashedAt) error(409, 'Zet de sessie eerst in de prullenbak.');
+  if (!session.trashedAt) error(409, serverT('server.trashSessionFirst'));
   await db
     .delete(sessions)
     .where(and(eq(sessions.id, sessionId), eq(sessions.campaignId, campaignId)));
@@ -365,7 +366,7 @@ export async function addNodeType(
     .from(nodeTypes)
     .where(and(eq(nodeTypes.campaignId, campaignId), eq(nodeTypes.key, input.key)))
     .limit(1);
-  if (existing) error(409, 'Er bestaat al een nodetype met deze naam.');
+  if (existing) error(409, serverT('server.nodeTypeExists'));
   await db.insert(nodeTypes).values({ campaignId, ...input, custom: true });
   await invalidateCampaign(campaignId, 'types');
 }
@@ -377,13 +378,13 @@ export async function removeNodeType(campaignId: string, userId: string, key: st
     .from(nodeTypes)
     .where(and(eq(nodeTypes.campaignId, campaignId), eq(nodeTypes.key, key)))
     .limit(1);
-  if (!type?.custom) error(409, 'Ingebouwde types kunnen niet verwijderd worden.');
+  if (!type?.custom) error(409, serverT('server.builtinType'));
   const [used] = await db
     .select({ id: nodes.id })
     .from(nodes)
     .where(and(eq(nodes.campaignId, campaignId), eq(nodes.typeKey, key)))
     .limit(1);
-  if (used) error(409, 'Dit type wordt nog door nodes gebruikt.');
+  if (used) error(409, serverT('server.typeInUse'));
   await db
     .delete(nodeTypes)
     .where(and(eq(nodeTypes.campaignId, campaignId), eq(nodeTypes.key, key)));
@@ -424,7 +425,7 @@ export async function restoreVersion(campaignId: string, versionId: string, user
     .from(versions)
     .where(and(eq(versions.id, versionId), eq(versions.campaignId, campaignId)))
     .limit(1);
-  if (!version) error(404, 'Versie niet gevonden.');
+  if (!version) error(404, serverT('server.versionNotFound'));
   if (version.entityType === 'session') {
     const session = await getSessionRow(campaignId, version.entityId);
     await saveSessionVersion(campaignId, session, user, true);
@@ -483,7 +484,7 @@ async function getNodeRow(campaignId: string, nodeId: string) {
     .from(nodes)
     .where(and(eq(nodes.id, nodeId), eq(nodes.campaignId, campaignId)))
     .limit(1);
-  if (!node) error(404, 'Node niet gevonden.');
+  if (!node) error(404, serverT('server.nodeNotFound'));
   return node;
 }
 
@@ -495,7 +496,7 @@ function assertNodeVisible(
   membership: AccessMembership
 ) {
   if (!canSeeNode(node, { id: userId }, membership.role, membership.campaign.rights)) {
-    error(404, 'Node niet gevonden.');
+    error(404, serverT('server.nodeNotFound'));
   }
 }
 
@@ -513,7 +514,7 @@ async function assertVisibleNodeIds(
     .where(
       and(eq(nodes.campaignId, campaignId), inArray(nodes.id, uniqueIds), isNull(nodes.trashedAt))
     );
-  if (rows.length !== uniqueIds.length) error(404, 'Een van de nodes bestaat niet.');
+  if (rows.length !== uniqueIds.length) error(404, serverT('server.someNodesNotFound'));
   for (const node of rows) assertNodeVisible(node, userId, membership);
 }
 
@@ -523,7 +524,7 @@ async function getSessionRow(campaignId: string, sessionId: string) {
     .from(sessions)
     .where(and(eq(sessions.id, sessionId), eq(sessions.campaignId, campaignId)))
     .limit(1);
-  if (!session) error(404, 'Sessie niet gevonden.');
+  if (!session) error(404, serverT('server.sessionNotFound'));
   return session;
 }
 

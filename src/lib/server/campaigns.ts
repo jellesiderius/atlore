@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
+import { serverT } from '$lib/i18n/server';
 import { DEFAULT_RIGHTS, BUILTIN_NODE_TYPES } from '$lib/domain/constants';
 import { normalizeBody } from '$lib/domain/text';
 import { canSeeNode, may } from '$lib/domain/permissions';
@@ -54,7 +55,7 @@ export async function requireMembership(campaignId: string, userId: string): Pro
       )
     )
     .limit(1);
-  if (!row) error(404, 'Campagne niet gevonden.');
+  if (!row) error(404, serverT('server.campaignNotFound'));
   return row;
 }
 
@@ -65,7 +66,7 @@ export async function requireRight(
 ): Promise<Membership> {
   const membership = await requireMembership(campaignId, userId);
   if (!may(membership.role, membership.campaign.rights, right))
-    error(403, 'Je hebt hier geen rechten voor.');
+    error(403, serverT('server.forbidden'));
   return membership;
 }
 
@@ -171,12 +172,12 @@ export async function updateCampaign(
 
 export async function deleteCampaign(campaignId: string, userId: string): Promise<void> {
   const membership = await requireMembership(campaignId, userId);
-  if (membership.role !== 'gm') error(403, 'Alleen een spelleider kan een campagne verwijderen.');
+  if (membership.role !== 'gm') error(403, serverT('server.deleteCampaignGmOnly'));
   const [gmCount] = await db
     .select({ value: count() })
     .from(campaignMembers)
     .where(and(eq(campaignMembers.campaignId, campaignId), eq(campaignMembers.role, 'gm')));
-  if (Number(gmCount.value) < 1) error(409, 'Deze campagne heeft geen spelleider.');
+  if (Number(gmCount.value) < 1) error(409, serverT('server.campaignNeedsGm'));
   await db
     .update(campaigns)
     .set({ deletedAt: new Date(), updatedAt: new Date() })
@@ -192,7 +193,7 @@ export async function getWorkspace(
   const actualMembership = await requireMembership(campaignId, viewer.id);
   const campaignRow = actualMembership.campaign;
   if (viewAsId && actualMembership.role !== 'gm') {
-    error(403, 'Alleen een spelleider kan de wereld als een andere speler bekijken.');
+    error(403, serverT('server.viewAsGmOnly'));
   }
   const [memberRows, typeRows, nodeRows, linkRows, sessionRows, scratchRows, postRows, mediaRows] =
     await Promise.all([
@@ -238,7 +239,9 @@ export async function getWorkspace(
     viewAsId && viewAsId !== viewer.id
       ? memberRows.find((member) => member.id === viewAsId)
       : undefined;
-  if (viewAsId && viewAsId !== viewer.id && !requestedView) error(404, 'Speler niet gevonden.');
+  if (viewAsId && viewAsId !== viewer.id && !requestedView) {
+    error(404, serverT('server.playerNotFound'));
+  }
   const viewAs = requestedView ?? null;
   const visibilityViewer = viewAs ?? viewer;
   const role = viewAs?.role ?? actualMembership.role;
@@ -481,7 +484,7 @@ export async function acceptInvitation(userId: string, token: string): Promise<s
       )
     )
     .limit(1);
-  if (!invitation) error(404, 'Deze uitnodiging is verlopen of al gebruikt.');
+  if (!invitation) error(404, serverT('server.invitationExpired'));
   await db.transaction(async (tx) => {
     await tx
       .insert(campaignMembers)
@@ -505,13 +508,13 @@ export async function updateMemberRole(
   role: 'gm' | 'player'
 ): Promise<void> {
   const membership = await requireMembership(campaignId, actingUserId);
-  if (membership.role !== 'gm') error(403, 'Alleen een spelleider kan rollen aanpassen.');
+  if (membership.role !== 'gm') error(403, serverT('server.rolesGmOnly'));
   if (actingUserId === targetUserId && role === 'player') {
     const [total] = await db
       .select({ value: count() })
       .from(campaignMembers)
       .where(and(eq(campaignMembers.campaignId, campaignId), eq(campaignMembers.role, 'gm')));
-    if (Number(total.value) <= 1) error(409, 'Maak eerst iemand anders spelleider.');
+    if (Number(total.value) <= 1) error(409, serverT('server.promoteOtherGm'));
   }
   await db
     .update(campaignMembers)
@@ -529,7 +532,7 @@ export async function removeMember(
 ): Promise<void> {
   const membership = await requireMembership(campaignId, actingUserId);
   if (membership.role !== 'gm' && actingUserId !== targetUserId)
-    error(403, 'Je kunt deze speler niet verwijderen.');
+    error(403, serverT('server.cannotRemovePlayer'));
   await db
     .delete(campaignMembers)
     .where(

@@ -3,6 +3,7 @@
   import AuthFormMessage from '$lib/components/auth/AuthFormMessage.svelte';
   import AuthShell from '$lib/components/auth/AuthShell.svelte';
   import { api } from '$lib/client/api';
+  import { t } from '$lib/i18n/index.svelte';
   let { data }: { data: { token: string } } = $props();
   let password = $state('');
   let repeat = $state('');
@@ -11,7 +12,7 @@
   async function submit(event: SubmitEvent) {
     event.preventDefault();
     if (password !== repeat) {
-      message = 'De wachtwoorden zijn niet gelijk.';
+      message = t('auth.reset.mismatch');
       return;
     }
     busy = true;
@@ -23,39 +24,39 @@
       });
       await goto('/campaigns', { invalidateAll: true });
     } catch (cause) {
-      message = cause instanceof Error ? cause.message : 'Herstellen is mislukt.';
+      message = cause instanceof Error ? cause.message : t('auth.reset.failed');
     } finally {
       busy = false;
     }
   }
 </script>
 
-<svelte:head><title>Nieuw wachtwoord · Atlore</title></svelte:head>
-<AuthShell heading="Een nieuw wachtwoord" subheading="Kies iets unieks van minstens tien tekens.">
+<svelte:head><title>{t('auth.reset.title')} · Atlore</title></svelte:head>
+<AuthShell heading={t('auth.reset.heading')} subheading={t('auth.reset.subheading')}>
   <form onsubmit={submit}>
     <input
       class="field"
-      aria-label="Nieuw wachtwoord"
+      aria-label={t('auth.reset.newPassword')}
       type="password"
       autocomplete="new-password"
       minlength="10"
-      placeholder="Nieuw wachtwoord"
+      placeholder={t('auth.reset.newPassword')}
       bind:value={password}
       required
     />
     <input
       class="field"
-      aria-label="Herhaal wachtwoord"
+      aria-label={t('auth.reset.repeatPassword')}
       type="password"
       autocomplete="new-password"
       minlength="10"
-      placeholder="Herhaal wachtwoord"
+      placeholder={t('auth.reset.repeatPassword')}
       bind:value={repeat}
       required
     />
     {#if message}<AuthFormMessage {message} />{/if}<button
       class="primary-button submit"
-      disabled={busy}>{busy ? 'Opslaan…' : 'Wachtwoord opslaan'}</button
+      disabled={busy}>{busy ? t('common.saving') : t('auth.reset.submit')}</button
     >
   </form>
 </AuthShell>

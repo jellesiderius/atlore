@@ -1,6 +1,7 @@
 <script lang="ts">
   import RichTextView from '$lib/components/richtext/RichTextView.svelte';
   import type { NodeType, SessionEntry, SessionScratch, WorldNode } from '$lib/types';
+  import { t } from '$lib/i18n/index.svelte';
   let {
     sessions,
     scratch,
@@ -24,15 +25,15 @@
 <section class="story">
   <header>
     <div>
-      <span class="eyebrow">Doorlopend verhaal</span>
-      <h1 class="serif-title">Aan tafel verteld</h1>
+      <span class="eyebrow">{t('story.title')}</span>
+      <h1 class="serif-title">{t('story.heading')}</h1>
     </div>
-    <span>{sessions.filter((item) => !item.trashedAt).length} sessies</span>
+    <span>{t('story.count', { count: sessions.filter((item) => !item.trashedAt).length })}</span>
   </header>
   <div class="scroll">
     {#each sessions.filter((item) => !item.trashedAt) as session}<article>
         <button class="session-heading" onclick={() => openSession(session.id)}
-          ><span>Sessie {session.sequence} · {session.worldDate}</span>
+          ><span>{t('session.sequence', { number: session.sequence })} · {session.worldDate}</span>
           <h2 class="serif-title">{session.title}</h2></button
         ><RichTextView
           body={session.body}
@@ -40,7 +41,7 @@
           {types}
           {openNode}
         />{#if scratchMap.has(session.id)}<details>
-            <summary>Aantekeningen · alleen {currentUserName}</summary><RichTextView
+            <summary>{t('story.privateNotes', { name: currentUserName })}</summary><RichTextView
               body={scratchMap.get(session.id)?.body ?? []}
               {nodes}
               {types}
@@ -48,7 +49,7 @@
             />
           </details>{/if}
       </article>{/each}{#if !sessions.filter((item) => !item.trashedAt).length}<p class="empty">
-        Nog geen sessies om te vertellen.
+        {t('story.noSessions')}
       </p>{/if}
   </div>
 </section>

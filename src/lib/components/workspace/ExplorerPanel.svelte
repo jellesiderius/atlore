@@ -6,6 +6,7 @@
   import { searchNodes } from '$lib/domain/search';
   import type { ForceSettings } from '$lib/components/graph/GraphCanvas.svelte';
   import type { NodeType, PanelName, SessionEntry, WorldNode } from '$lib/types';
+  import { nodeTypeLabel, t } from '$lib/i18n/index.svelte';
   let {
     open,
     panel,
@@ -79,10 +80,10 @@
     if (panel === 'search') setTimeout(() => searchInput?.focus());
   });
   const tabs: [PanelName, string, string][] = [
-    ['explorer', 'Explorer', 'session'],
-    ['recent', 'Recent', 'clock'],
-    ['search', 'Zoeken', 'search'],
-    ['settings', 'Instellingen', 'settings']
+    ['explorer', 'explorer.explorer', 'session'],
+    ['recent', 'explorer.recent', 'clock'],
+    ['search', 'explorer.search', 'search'],
+    ['settings', 'explorer.settings', 'settings']
   ];
   const forceControls: {
     key: keyof ForceSettings;
@@ -92,10 +93,10 @@
     step: number;
     digits: number;
   }[] = [
-    { key: 'repel', label: 'Afstoting', min: 400, max: 4200, step: 50, digits: 0 },
-    { key: 'distance', label: 'Linklengte', min: 40, max: 240, step: 2, digits: 0 },
-    { key: 'grouping', label: 'Groepering', min: 0, max: 1.4, step: 0.02, digits: 2 },
-    { key: 'gravity', label: 'Middelpunt', min: 0, max: 1, step: 0.01, digits: 2 }
+    { key: 'repel', label: 'explorer.repel', min: 400, max: 4200, step: 50, digits: 0 },
+    { key: 'distance', label: 'explorer.linkLength', min: 40, max: 240, step: 2, digits: 0 },
+    { key: 'grouping', label: 'explorer.grouping', min: 0, max: 1.4, step: 0.02, digits: 2 },
+    { key: 'gravity', label: 'explorer.center', min: 0, max: 1, step: 0.01, digits: 2 }
   ];
   function toggle(key: string) {
     const next = new Set(expanded);
@@ -109,23 +110,23 @@
   }
 </script>
 
-<aside class:open aria-label="Explorerpaneel">
+<aside class:open aria-label={t('explorer.label')}>
   <div class="panel-tabs">
     {#each tabs as [key, label, icon]}<button
         class="icon-button"
         class:active={panel === key}
-        aria-label={label}
-        use:tooltip={label}
+        aria-label={t(label)}
+        use:tooltip={t(label)}
         onclick={() => onPanel(key)}><Icon name={icon} size={17} /></button
       >{/each}<span></span>{#if canCreate}<button
         class="icon-button add"
-        aria-label="Nieuwe node"
-        use:tooltip={'Nieuwe node'}
+        aria-label={t('explorer.newNode')}
+        use:tooltip={t('explorer.newNode')}
         onclick={onNew}><Icon name="plus" size={17} /></button
       >{/if}<button
       class="icon-button close"
-      aria-label="Paneel sluiten"
-      use:tooltip={'Paneel sluiten'}
+      aria-label={t('explorer.closePanel')}
+      use:tooltip={t('explorer.closePanel')}
       onclick={onClose}><Icon name="close" size={15} /></button
     >
   </div>
@@ -138,7 +139,7 @@
           >
             <button class="group-head" onclick={() => toggle(type.key)}
               ><i class:open={expanded.has(type.key)}>▶</i><span style:background={type.colorDark}
-              ></span><b>{type.nl}</b><small>{items.length}</small></button
+              ></span><b>{nodeTypeLabel(type)}</b><small>{items.length}</small></button
             >{#if expanded.has(type.key)}<div class="group-items">
                 {#each items.slice(0, items.length > 150 ? 40 : items.length) as node}<button
                     class:active={selected === node.id}
@@ -152,7 +153,7 @@
                     ><span style:background={type.colorDark}></span><b>{node.title}</b
                     >{#if !node.revealed}<em>✦</em>{/if}</button
                   >{/each}{#if items.length > 150}<div class="more">
-                    Nog {items.length - 40} · gebruik zoeken
+                    {t('explorer.more', { count: items.length - 40 })}
                   </div>{/if}
               </div>{/if}
           </section>{/if}{/each}
@@ -162,21 +163,31 @@
           .map((id) => activeNodes.find((node) => node.id === id))
           .filter(Boolean) as node}<button onclick={() => onNode(node!.id)}
             ><span style:background={typeMap.get(node!.type)?.colorDark}></span><b>{node!.title}</b
-            ><small>{typeMap.get(node!.type)?.one}</small></button
-          >{/each}{#if !recent.length}<div class="empty">Nog niets geopend.</div>{/if}
+            ><small
+              >{typeMap.get(node!.type)
+                ? nodeTypeLabel(typeMap.get(node!.type)!, 'singular')
+                : ''}</small
+            ></button
+          >{/each}{#if !recent.length}<div class="empty">{t('explorer.nothingOpened')}</div>{/if}
       </div>
     {:else if panel === 'search'}
       <input
         bind:this={searchInput}
         class="field search"
         bind:value={query}
-        placeholder="Zoek nodes…"
+        placeholder={t('explorer.searchPlaceholder')}
       />
       <div class="rows">
         {#each searchResults as node}<button onclick={() => onNode(node.id)}
             ><span style:background={typeMap.get(node.type)?.colorDark}></span><b>{node.title}</b
-            ><small>{typeMap.get(node.type)?.one}</small></button
-          >{/each}{#if query && !searchResults.length}<div class="empty">Niets gevonden.</div>{/if}
+            ><small
+              >{typeMap.get(node.type)
+                ? nodeTypeLabel(typeMap.get(node.type)!, 'singular')
+                : ''}</small
+            ></button
+          >{/each}{#if query && !searchResults.length}<div class="empty">
+            {t('explorer.nothingFound')}
+          </div>{/if}
       </div>
     {:else}
       <TrashManager
@@ -189,9 +200,9 @@
         restoreSession={onRestoreSession}
         purgeSession={onPurgeSession}
       />
-      <div class="eyebrow section-label">Krachten</div>
+      <div class="eyebrow section-label">{t('explorer.forces')}</div>
       {#each forceControls as item}<label class="slider"
-          ><span>{item.label}<b>{settings[item.key].toFixed(item.digits)}</b></span><input
+          ><span>{t(item.label)}<b>{settings[item.key].toFixed(item.digits)}</b></span><input
             type="range"
             min={item.min}
             max={item.max}
@@ -200,13 +211,16 @@
             oninput={(event) =>
               onForceSettings({ ...settings, [item.key]: Number(event.currentTarget.value) })}
           /></label
-        >{/each}<button class="ghost-button reflow" onclick={onReflow}>Herschik de kaart</button>
-      <div class="eyebrow section-label">Weergave</div>
+        >{/each}<button class="ghost-button reflow" onclick={onReflow}
+        >{t('explorer.reflow')}</button
+      >
+      <div class="eyebrow section-label">{t('explorer.display')}</div>
       <button class="setting-row" onclick={onTheme}
-        ><span>Licht thema</span><span class:on={theme === 'light'} class="switch"><i></i></span
+        ><span>{t('explorer.lightTheme')}</span><span class:on={theme === 'light'} class="switch"
+          ><i></i></span
         ></button
       >{#if canManage}<button class="setting-row" onclick={onCampaignSettings}
-          ><span>Campagne-instellingen</span><Icon name="settings" size={15} /></button
+          ><span>{t('explorer.campaignSettings')}</span><Icon name="settings" size={15} /></button
         >{/if}
       <NodeTypeManager {types} {canManage} add={onAddType} remove={onRemoveType} />
     {/if}

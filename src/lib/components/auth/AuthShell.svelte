@@ -1,5 +1,6 @@
 <script lang="ts">
   import Starfield from '$lib/components/visual/Starfield.svelte';
+  import LanguageSwitcher from '$lib/components/ui/LanguageSwitcher.svelte';
   let {
     heading,
     subheading,
@@ -16,6 +17,7 @@
 <main class="auth-shell">
   <Starfield />
   <div class="vignette"></div>
+  <div class="language"><LanguageSwitcher compact /></div>
   <section>
     <header>
       <div class="eyebrow">{eyebrow}</div>
@@ -52,6 +54,12 @@
     z-index: -1;
     pointer-events: none;
     background: radial-gradient(120% 90% at 50% 50%, transparent 45%, rgba(0, 0, 0, 0.5) 100%);
+  }
+  .language {
+    position: absolute;
+    z-index: 2;
+    right: 14px;
+    top: max(14px, env(safe-area-inset-top));
   }
   section {
     position: relative;

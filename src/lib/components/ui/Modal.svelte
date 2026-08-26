@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import Icon from './Icon.svelte';
   import { tooltip } from '$lib/actions/tooltip';
+  import { t } from '$lib/i18n/index.svelte';
   let {
     title,
     eyebrow = '',
@@ -36,8 +37,11 @@
         {#if eyebrow}<div class="eyebrow">{eyebrow}</div>{/if}
         <h2 class="serif-title">{title}</h2>
       </div>
-      <button class="icon-button" aria-label="Sluiten" use:tooltip={'Sluiten'} onclick={close}
-        ><Icon name="close" size={16} /></button
+      <button
+        class="icon-button"
+        aria-label={t('common.close')}
+        use:tooltip={t('common.close')}
+        onclick={close}><Icon name="close" size={16} /></button
       >
     </header>
     <div class="modal-content">{@render children()}</div>

@@ -7,6 +7,7 @@ import { ok, parseJson } from '$lib/server/http';
 import { sendPasswordReset } from '$lib/server/mail';
 import { rateLimit } from '$lib/server/redis';
 import { forgotSchema } from '$lib/server/validation';
+import { serverT } from '$lib/i18n/server';
 
 export const POST: RequestHandler = async (event) => {
   const input = await parseJson(event.request, forgotSchema);
@@ -27,5 +28,5 @@ export const POST: RequestHandler = async (event) => {
       await sendPasswordReset(user.email, token);
     }
   }
-  return ok({ message: 'Als dit account bestaat, is de herstelmail onderweg.' });
+  return ok({ message: serverT('server.recoverySent') });
 };

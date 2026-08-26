@@ -18,6 +18,7 @@
     WorldLink,
     WorldNode
   } from '$lib/types';
+  import { nodeTypeLabel, t } from '$lib/i18n/index.svelte';
   let {
     node,
     nodes,
@@ -133,14 +134,14 @@
   const saveBody = debounce(async (body: Paragraph[]) => {
     descriptionBody = body;
     await saveDescription(body, shared);
-    saved = 'Opgeslagen';
+    saved = t('node.saved');
     setTimeout(() => (saved = ''), 1800);
   }, 700);
   async function saveHeader() {
     busy = true;
     try {
       await saveNode({ title, summary, type, revealed, visibility, visibleWith });
-      saved = 'Opgeslagen';
+      saved = t('node.saved');
     } finally {
       busy = false;
     }
@@ -175,7 +176,7 @@
   }
   async function saveGame() {
     await saveNode({ stats, gear });
-    saved = 'Opgeslagen';
+    saved = t('node.saved');
   }
 </script>
 
@@ -183,32 +184,38 @@
   <header>
     <button
       class="icon-button"
-      aria-label="Dossier sluiten"
-      use:tooltip={'Dossier sluiten'}
+      aria-label={t('node.dossierClose')}
+      use:tooltip={t('node.dossierClose')}
       onclick={close}><Icon name="back" size={17} /></button
     >
     <div>
-      <small style:color={typeMap.get(type)?.colorDark}>{typeMap.get(type)?.one ?? type}</small
-      ><input aria-label="Nodenaam" bind:value={title} disabled={!canEdit} onblur={saveHeader} />
+      <small style:color={typeMap.get(type)?.colorDark}
+        >{typeMap.get(type) ? nodeTypeLabel(typeMap.get(type)!, 'singular') : type}</small
+      ><input
+        aria-label={t('node.name')}
+        bind:value={title}
+        disabled={!canEdit}
+        onblur={saveHeader}
+      />
     </div>
     {#if canHistory}<button
         class="icon-button"
-        aria-label="Geschiedenis"
-        use:tooltip={'Geschiedenis'}
+        aria-label={t('history.eyebrow')}
+        use:tooltip={t('history.eyebrow')}
         onclick={showHistory}><Icon name="clock" size={16} /></button
       >{/if}
   </header>
   <nav>
-    {#each [['overview', 'Overzicht'], ...(PLACE_TYPES.has(node.type) ? [['map', 'Kaart']] : []), ['game', 'Spel'], ['relations', 'Relaties'], ['story', 'Verhaal']] as item}<button
+    {#each [['overview', 'node.overview'], ...(PLACE_TYPES.has(node.type) ? [['map', 'node.map']] : []), ['game', 'node.game'], ['relations', 'node.relations'], ['story', 'node.story']] as item}<button
         class:active={tab === item[0]}
-        onclick={() => (tab = item[0] as typeof tab)}>{item[1]}</button
+        onclick={() => (tab = item[0] as typeof tab)}>{t(item[1])}</button
       >{/each}
   </nav>
   <div class="content">
     {#if tab === 'overview'}
       <div class="hero">
         {#if image}<img src={image.url} alt={node.title} />{:else if canImage}<label class="upload"
-            ><Icon name="upload" /><span>Afbeelding toevoegen</span><input
+            ><Icon name="upload" /><span>{t('node.addImage')}</span><input
               type="file"
               accept="image/jpeg,image/png,image/webp,image/gif"
               onchange={(event) => imagePicked(event, 'image')}
@@ -218,7 +225,7 @@
       <div class="header-fields">
         <select class="field" bind:value={type} disabled={!canEdit} onchange={saveHeader}
           >{#each types.filter((item) => item.key !== 'session') as item}<option value={item.key}
-              >{item.one}</option
+              >{nodeTypeLabel(item, 'singular')}</option
             >{/each}</select
         >
         <div class="visibility">
@@ -229,14 +236,14 @@
               revealed = true;
               visibility = 'all';
               saveHeader();
-            }}>Iedereen</button
+            }}>{t('node.everyone')}</button
           ><button
             disabled={!canReveal}
             class:active={revealed && visibility === 'sel'}
             onclick={() => {
               revealed = true;
               visibility = 'sel';
-            }}>Gekozen</button
+            }}>{t('node.selected')}</button
           ><button
             disabled={!canReveal}
             class:active={!revealed || visibility === 'me'}
@@ -244,7 +251,7 @@
               revealed = false;
               visibility = 'me';
               saveHeader();
-            }}>Alleen ik</button
+            }}>{t('node.onlyMe')}</button
           >
         </div>
       </div>
@@ -259,18 +266,18 @@
             >{/each}
         </div>{/if}
       <label class="summary-label"
-        >Samenvatting<input
+        >{t('node.summary')}<input
           class="field"
           bind:value={summary}
           disabled={!canEdit}
-          placeholder="Eén regel over deze node"
+          placeholder={t('node.summaryPlaceholder')}
           onblur={saveHeader}
         /></label
       >
       <div class="description-head">
         <div>
-          <div class="eyebrow">Jouw beschrijving</div>
-          <small>{saved || 'Typ @ om te koppelen'}</small>
+          <div class="eyebrow">{t('node.yourDescription')}</div>
+          <small>{saved || t('node.mentionHint')}</small>
         </div>
         <button
           class:shared
@@ -280,8 +287,8 @@
             await saveDescription(descriptionBody, shared);
           }}
           ><Icon name={shared ? 'eye' : 'eye-off'} size={14} />{shared
-            ? 'Gedeeld met de tafel'
-            : 'Alleen voor jou'}</button
+            ? t('node.sharedAtTable')
+            : t('node.privateForYou')}</button
         >
       </div>
       <RichTextEditor
@@ -289,13 +296,13 @@
         {nodes}
         {types}
         readonly={!canEdit}
-        placeholder="Wat weet jij over deze node?"
+        placeholder={t('node.descriptionPlaceholder')}
         onChange={saveBody}
         {openNode}
         createNode={createMention}
       />
       {#if others.length}<details>
-          <summary>Toon wat anderen schreven · {others.length}</summary
+          <summary>{t('node.showOthers', { count: others.length })}</summary
           >{#each others as description}<article style:border-left-color={description.userColor}>
               <b style:color={description.userColor}>{description.userName}</b><RichTextView
                 body={description.body}
@@ -306,11 +313,13 @@
             </article>{/each}
         </details>{/if}
       <div class="posts">
-        <div class="eyebrow">Notities</div>
+        <div class="eyebrow">{t('node.notes')}</div>
         {#each nodePosts as post}<article style:border-left-color={post.byColor}>
             <header>
               <b style:color={post.byColor}>{post.byName}</b><span
-                >{post.kind} · {post.visibility}</span
+                >{t(`node.postKind.${post.kind}`)} · {t(
+                  `node.postVisibility.${post.visibility}`
+                )}</span
               >
             </header>
             <p>{post.text}</p>
@@ -318,33 +327,34 @@
         {#if canEdit}<form onsubmit={submitPost}>
             <div>
               <select bind:value={postKind}
-                ><option value="note">Notitie</option><option value="theory">Theorie</option><option
-                  value="goal">Doel</option
-                ></select
+                ><option value="note">{t('node.postKind.note')}</option><option value="theory"
+                  >{t('node.postKind.theory')}</option
+                ><option value="goal">{t('node.postKind.goal')}</option></select
               ><select bind:value={postVisibility}
-                ><option value="me">Alleen ik</option><option value="all">Iedereen</option><option
-                  value="gm">DM</option
-                ></select
+                ><option value="me">{t('node.postVisibility.me')}</option><option value="all"
+                  >{t('node.postVisibility.all')}</option
+                ><option value="gm">{t('node.postVisibility.gm')}</option></select
               >
             </div>
-            <textarea class="field" bind:value={postText} rows="2" placeholder="Nieuwe notitie…"
-            ></textarea><button class="secondary-button">Toevoegen</button>
+            <textarea class="field" bind:value={postText} rows="2" placeholder={t('node.newNote')}
+            ></textarea><button class="secondary-button">{t('node.addNote')}</button>
           </form>{/if}
       </div>
     {:else if tab === 'map'}
       {#if mapImage}<div class="node-map">
-          <img src={mapImage.url} alt={`Kaart van ${node.title}`} />
-          <p>Deze kaart is ook beschikbaar in de kaartweergave.</p>
+          <img src={mapImage.url} alt={t('atlas.mapOf', { title: node.title })} />
+          <p>{t('node.mapAvailable')}</p>
         </div>{:else if canImage}<label class="map-upload"
-          ><Icon name="atlas" size={35} /><b class="serif-title">Een kaart voor {node.title}</b
-          ><span>Upload een afbeelding en plaats er nodes als markers op.</span><input
+          ><Icon name="atlas" size={35} /><b class="serif-title"
+            >{t('node.mapFor', { title: node.title })}</b
+          ><span>{t('node.mapUploadHint')}</span><input
             type="file"
             accept="image/jpeg,image/png,image/webp,image/gif"
             onchange={(event) => imagePicked(event, 'map')}
           /></label
         >{/if}
     {:else if tab === 'game'}
-      <div class="eyebrow">Statistieken</div>
+      <div class="eyebrow">{t('node.statistics')}</div>
       <div class="stats">
         {#each CHARACTER_FIELDS[node.type] ?? ['ac', 'hp', 'speed', 'initiative'] as key}<label
             >{key.toUpperCase()}<input
@@ -356,37 +366,41 @@
           >{/each}
       </div>
       <div class="gear-head">
-        <div class="eyebrow">Uitrusting</div>
+        <div class="eyebrow">{t('node.gear')}</div>
         {#if canEdit}<button onclick={() => (gear = [...gear, { name: '', note: '' }])}
-            >+ regel</button
+            >+ {t('node.addRow')}</button
           >{/if}
       </div>
       <div class="gear">
         {#each gear as item, index}<input
             class="field"
             bind:value={item.name}
-            placeholder="Voorwerp"
+            placeholder={t('node.item')}
             disabled={!canEdit}
           /><input
             class="field"
             bind:value={item.note}
-            placeholder="Notitie"
+            placeholder={t('node.note')}
             disabled={!canEdit}
           /><button onclick={() => (gear = gear.filter((_, i) => i !== index))}>×</button>{/each}
       </div>
       {#if canEdit}<button class="primary-button save-game" onclick={saveGame}
-          >Spelgegevens opslaan</button
+          >{t('node.saveGame')}</button
         >{/if}
     {:else if tab === 'relations'}
-      <div class="eyebrow">Gekoppeld · {related.length}</div>
+      <div class="eyebrow">{t('node.linked', { count: related.length })}</div>
       <div class="relations">
         {#each related as item}<button class="relation" onclick={() => openNode(item.other!.id)}
             ><span style:background={typeMap.get(item.other!.type)?.colorDark}></span><b
               >{item.other!.title}</b
-            ><small>{typeMap.get(item.other!.type)?.one}</small></button
+            ><small
+              >{typeMap.get(item.other!.type)
+                ? nodeTypeLabel(typeMap.get(item.other!.type)!, 'singular')
+                : ''}</small
+            ></button
           >{#if canLink}<button
               class="unlink"
-              aria-label="Loskoppelen"
+              aria-label={t('node.unlink')}
               onclick={() => disconnect(item.link.id)}>×</button
             >{/if}{/each}
       </div>
@@ -394,7 +408,7 @@
           <input
             class="field"
             bind:value={relationQuery}
-            placeholder="Zoek om te verbinden…"
+            placeholder={t('node.connectSearch')}
           />{#if relationQuery}<div>
               {#each relationResults as result}<button
                   onclick={() => {
@@ -406,19 +420,19 @@
                 >{/each}
             </div>{/if}
         </div>{/if}
-      <div class="eyebrow suggestions-title">Samen genoemd in sessies</div>
+      <div class="eyebrow suggestions-title">{t('node.mentionedTogether')}</div>
       <div class="session-chips">
         {#each mentions as session}<button onclick={() => openSession(session.id)}
             >{session.title}</button
-          >{/each}{#if !mentions.length}<p>Nog niet genoemd in een sessie.</p>{/if}
+          >{/each}{#if !mentions.length}<p>{t('node.notMentioned')}</p>{/if}
       </div>
     {:else}
-      <div class="eyebrow">In het verhaal · {mentions.length}</div>
+      <div class="eyebrow">{t('node.inStory', { count: mentions.length })}</div>
       <div class="story-list">
         {#each mentions as session}<button onclick={() => openSession(session.id)}
-            ><small>Sessie {session.sequence} · {session.worldDate}</small><b class="serif-title"
-              >{session.title}</b
-            ><RichTextView
+            ><small
+              >{t('session.sequence', { number: session.sequence })} · {session.worldDate}</small
+            ><b class="serif-title">{session.title}</b><RichTextView
               body={session.body
                 .filter((paragraph) =>
                   paragraph.segs.some((segment) => segment.t === 'ref' && segment.id === node.id)
@@ -428,7 +442,7 @@
               {types}
               {openNode}
             /></button
-          >{/each}{#if !mentions.length}<p>Deze node komt nog niet in het verhaal voor.</p>{/if}
+          >{/each}{#if !mentions.length}<p>{t('node.notInStory')}</p>{/if}
       </div>
     {/if}
   </div>

@@ -3,6 +3,7 @@
   import Modal from '$lib/components/ui/Modal.svelte';
   import { searchNodes } from '$lib/domain/search';
   import type { NodeType, WorldLink, WorldNode } from '$lib/types';
+  import { nodeTypeLabel, t } from '$lib/i18n/index.svelte';
   let {
     node,
     nodes,
@@ -38,8 +39,16 @@
   onMount(() => searchInput?.focus());
 </script>
 
-<Modal title={`Verbinden met ${node.title}`} eyebrow="Koppelingen leggen" {close}
-  ><input bind:this={searchInput} class="field" bind:value={query} placeholder="Zoek nodes…" />
+<Modal
+  title={t('connection.title', { title: node.title })}
+  eyebrow={t('connection.eyebrow')}
+  {close}
+  ><input
+    bind:this={searchInput}
+    class="field"
+    bind:value={query}
+    placeholder={t('connection.placeholder')}
+  />
   <div class="connected">
     {#each [...connected]
       .map((id) => nodes.find((item) => item.id === id))
@@ -59,11 +68,16 @@
         }}
         ><span style:background={types.find((type) => type.key === result.type)?.colorDark}
         ></span><b>{result.title}</b><small
-          >{types.find((type) => type.key === result.type)?.one}</small
+          >{types.find((type) => type.key === result.type)
+            ? nodeTypeLabel(
+                types.find((type) => type.key === result.type)!,
+                'singular'
+              )
+            : ''}</small
         ><em>{busy === result.id ? '…' : '+'}</em></button
-      >{/each}{#if query && !results.length}<p>Geen andere nodes gevonden.</p>{/if}
+      >{/each}{#if query && !results.length}<p>{t('connection.noResults')}</p>{/if}
   </div>
-  <p class="hint">Blijf nodes aantikken; dit venster blijft open.</p></Modal
+  <p class="hint">{t('connection.hint')}</p></Modal
 >
 
 <style>

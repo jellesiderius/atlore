@@ -6,6 +6,7 @@ import { db } from '$lib/server/db';
 import { authSessions, passwordResetTokens, users } from '$lib/server/db/schema';
 import { ok, parseJson } from '$lib/server/http';
 import { resetSchema } from '$lib/server/validation';
+import { serverT } from '$lib/i18n/server';
 
 export const POST: RequestHandler = async (event) => {
   const input = await parseJson(event.request, resetSchema);
@@ -20,7 +21,7 @@ export const POST: RequestHandler = async (event) => {
       )
     )
     .limit(1);
-  if (!reset) error(404, 'Deze herstellink is verlopen of al gebruikt.');
+  if (!reset) error(404, serverT('server.resetExpired'));
   await db.transaction(async (tx) => {
     await tx
       .update(users)

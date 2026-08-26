@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { t } from '$lib/i18n/index.svelte';
+
   export interface Toast {
     id: string;
     text: string;
@@ -14,7 +16,8 @@
             toast.action!.run();
             dismiss(toast.id);
           }}>{toast.action.label}</button
-        >{/if}<button class="close" aria-label="Sluiten" onclick={() => dismiss(toast.id)}>×</button
+        >{/if}<button class="close" aria-label={t('common.close')} onclick={() => dismiss(toast.id)}
+        >×</button
       >
     </div>{/each}
 </div>

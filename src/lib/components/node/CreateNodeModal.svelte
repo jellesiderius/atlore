@@ -3,6 +3,7 @@
   import Modal from '$lib/components/ui/Modal.svelte';
   import { searchNodes } from '$lib/domain/search';
   import type { CampaignMember, NodeType, Visibility, WorldNode } from '$lib/types';
+  import { nodeTypeLabel, t } from '$lib/i18n/index.svelte';
   let {
     initialTitle = '',
     initialX = 0,
@@ -74,20 +75,20 @@
       });
       close();
     } catch (cause) {
-      message = cause instanceof Error ? cause.message : 'Aanmaken is mislukt.';
+      message = cause instanceof Error ? cause.message : t('errors.createFailed');
     } finally {
       busy = false;
     }
   }
 </script>
 
-<Modal title="Nieuwe node" eyebrow="Breid de wereld uit" {close}>
+<Modal title={t('createNode.title')} eyebrow={t('createNode.eyebrow')} {close}>
   <form onsubmit={submit}>
     <input
       bind:this={titleInput}
       class="field title"
       bind:value={title}
-      placeholder="Naam"
+      placeholder={t('createNode.name')}
       required
       maxlength="160"
     />
@@ -96,17 +97,17 @@
           type="button"
           class:active={type === item.key}
           style:--type-color={item.colorDark}
-          onclick={() => (type = item.key)}><span></span>{item.one}</button
+          onclick={() => (type = item.key)}><span></span>{nodeTypeLabel(item, 'singular')}</button
         >{/each}
     </div>
     <input
       class="field"
       bind:value={summary}
-      placeholder="Eén regel samenvatting"
+      placeholder={t('node.summaryPlaceholder')}
       maxlength="500"
     />
     <div class="connect">
-      <div class="eyebrow">Direct verbinden met</div>
+      <div class="eyebrow">{t('createNode.connect')}</div>
       {#if selectedNodes.length}<div class="chips">
           {#each selectedNodes as node}<button
               type="button"
@@ -116,7 +117,7 @@
         </div>{/if}<input
         class="field"
         bind:value={query}
-        placeholder="Zoek nodes… meerdere mag"
+        placeholder={t('createNode.searchMultiple')}
       />{#if query}<div class="results">
           {#each results as node}<button
               type="button"
@@ -130,7 +131,7 @@
         </div>{/if}
     </div>
     <div class="visibility">
-      <div class="eyebrow">Zichtbaar</div>
+      <div class="eyebrow">{t('createNode.visible')}</div>
       <div class="options">
         <button
           type="button"
@@ -138,21 +139,21 @@
           onclick={() => {
             revealed = true;
             visibility = 'all';
-          }}>Iedereen</button
+          }}>{t('createNode.everyone')}</button
         ><button
           type="button"
           class:active={revealed && visibility === 'sel'}
           onclick={() => {
             revealed = true;
             visibility = 'sel';
-          }}>Gekozen</button
+          }}>{t('createNode.selected')}</button
         ><button
           type="button"
           class:active={!revealed || visibility === 'me'}
           onclick={() => {
             revealed = false;
             visibility = 'me';
-          }}>Alleen ik</button
+          }}>{t('createNode.onlyMe')}</button
         >
       </div>
       {#if visibility === 'sel'}<div class="players">
@@ -169,9 +170,9 @@
     </div>
     {#if message}<div class="error">{message}</div>{/if}
     <div class="actions">
-      <button type="button" class="ghost-button" onclick={close}>Annuleer</button><button
-        class="primary-button"
-        disabled={busy}>{busy ? 'Toevoegen…' : 'Toevoegen'}</button
+      <button type="button" class="ghost-button" onclick={close}>{t('common.cancel')}</button
+      ><button class="primary-button" disabled={busy}
+        >{busy ? t('createNode.adding') : t('createNode.add')}</button
       >
     </div>
   </form>

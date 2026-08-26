@@ -4,6 +4,7 @@
   import AuthFormMessage from '$lib/components/auth/AuthFormMessage.svelte';
   import AuthShell from '$lib/components/auth/AuthShell.svelte';
   import { api } from '$lib/client/api';
+  import { t } from '$lib/i18n/index.svelte';
 
   let email = $state('');
   let password = $state('');
@@ -19,44 +20,44 @@
       const next = page.url.searchParams.get('next');
       await goto(next?.startsWith('/') ? next : '/campaigns', { invalidateAll: true });
     } catch (cause) {
-      message = cause instanceof Error ? cause.message : 'Inloggen is mislukt.';
+      message = cause instanceof Error ? cause.message : t('auth.login.failed');
     } finally {
       busy = false;
     }
   }
 </script>
 
-<svelte:head><title>Inloggen · Atlore</title></svelte:head>
+<svelte:head><title>{t('auth.login.title')} · Atlore</title></svelte:head>
 
-<AuthShell heading="Welkom terug" subheading="Log in om verder te gaan waar de tafel gebleven was.">
+<AuthShell heading={t('auth.login.heading')} subheading={t('auth.login.subheading')}>
   <form onsubmit={submit}>
-    <label class="screen-reader-only" for="email">E-mailadres</label>
+    <label class="screen-reader-only" for="email">{t('auth.email')}</label>
     <input
       class="field"
       id="email"
       type="email"
       autocomplete="email"
-      placeholder="E-mailadres"
+      placeholder={t('auth.email')}
       bind:value={email}
       required
     />
-    <label class="screen-reader-only" for="password">Wachtwoord</label>
+    <label class="screen-reader-only" for="password">{t('auth.password')}</label>
     <input
       class="field"
       id="password"
       type="password"
       autocomplete="current-password"
-      placeholder="Wachtwoord"
+      placeholder={t('auth.password')}
       bind:value={password}
       required
     />
     {#if message}<AuthFormMessage {message} />{/if}
     <button class="primary-button submit" disabled={busy}
-      >{busy ? 'Even wachten…' : 'Inloggen'}</button
+      >{busy ? t('auth.wait') : t('auth.login.submit')}</button
     >
     <div class="links">
-      <a href="/auth/forgot">Wachtwoord vergeten</a><span
-        >Nog geen account? <a href="/auth/register">Aanmelden</a></span
+      <a href="/auth/forgot">{t('auth.login.forgot')}</a><span
+        >{t('auth.login.noAccount')} <a href="/auth/register">{t('auth.login.register')}</a></span
       >
     </div>
   </form>

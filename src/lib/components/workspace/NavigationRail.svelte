@@ -2,22 +2,23 @@
   import Icon from '$lib/components/ui/Icon.svelte';
   import { tooltip } from '$lib/actions/tooltip';
   import type { ViewName } from '$lib/types';
+  import { t } from '$lib/i18n/index.svelte';
   let { view, pick }: { view: ViewName; pick: (view: ViewName) => void } = $props();
-  const items: { key: ViewName; label: string; icon: string }[] = [
-    { key: 'graph', label: 'Graph', icon: 'graph' },
-    { key: 'session', label: 'Sessie', icon: 'session' },
-    { key: 'story', label: 'Verhaal', icon: 'story' },
-    { key: 'atlas', label: 'Kaart', icon: 'atlas' }
+  const items: { key: ViewName; labelKey: string; icon: string }[] = [
+    { key: 'graph', labelKey: 'navigation.graph', icon: 'graph' },
+    { key: 'session', labelKey: 'navigation.session', icon: 'session' },
+    { key: 'story', labelKey: 'navigation.story', icon: 'story' },
+    { key: 'atlas', labelKey: 'navigation.atlas', icon: 'atlas' }
   ];
 </script>
 
-<nav aria-label="Hoofdweergaven">
+<nav aria-label={t('navigation.label')}>
   {#each items as item}<button
       class:active={view === item.key}
-      aria-label={item.label}
-      use:tooltip={item.label}
+      aria-label={t(item.labelKey)}
+      use:tooltip={t(item.labelKey)}
       onclick={() => pick(item.key)}
-      ><Icon name={item.icon} size={17} /><span>{item.label}</span></button
+      ><Icon name={item.icon} size={17} /><span>{t(item.labelKey)}</span></button
     >{/each}
 </nav>
 

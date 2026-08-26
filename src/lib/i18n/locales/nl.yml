@@ -1,0 +1,482 @@
+language:
+  label: Taal
+meta:
+  description: Atlore — de gedeelde kennisgraaf voor je tabletop-campagne.
+common:
+  atlore: Atlore
+  cancel: Annuleer
+  close: Sluiten
+  open: Openen
+  save: Opslaan
+  saving: Opslaan…
+  delete: Verwijderen
+  remove: Verwijder
+  restore: Herstel
+  search: Zoeken
+  settings: Instellingen
+  loading: Laden…
+  upload: Uploaden…
+  back: Terug
+  yes: Ja
+  no: Nee
+  secret: geheim
+  pinned: vast
+  gameMaster: Spelleider
+  player: Speler
+  node: Node
+  session: Sessie
+  story: Verhaal
+  map: Kaart
+  graph: Graph
+  untitled: Zonder titel
+  none: Geen
+  personal: Persoonlijk
+  shared: Gedeeld
+  edit: Bewerken
+  create: Aanmaken
+  add: Toevoegen
+  send: Versturen
+  unknownError: Er ging iets mis. Probeer het opnieuw.
+  undo: Ongedaan
+auth:
+  email: E-mailadres
+  password: Wachtwoord
+  wait: Even wachten…
+  login:
+    title: Inloggen
+    heading: Welkom terug
+    subheading: Log in om verder te gaan waar de tafel gebleven was.
+    submit: Inloggen
+    failed: Inloggen is mislukt.
+    forgot: Wachtwoord vergeten
+    noAccount: Nog geen account?
+    register: Aanmelden
+  register:
+    title: Account maken
+    heading: Neem plaats
+    subheading: Maak een account en begin een wereld die met elk verhaal groeit.
+    name: Naam
+    namePlaceholder: Hoe mogen we je noemen?
+    passwordPlaceholder: Wachtwoord · minstens 10 tekens
+    submit: Account maken
+    failed: Aanmelden is mislukt.
+    existing: Al een account?
+  forgot:
+    title: Wachtwoord vergeten
+    heading: Vind de draad terug
+    subheading: We sturen je een eenmalige link waarmee je weer naar binnen kunt.
+    failed: Aanvraag mislukt.
+    sending: Versturen…
+    sent: Mail verstuurd
+    submit: Stuur herstellink
+    back: Terug naar inloggen
+  reset:
+    title: Nieuw wachtwoord
+    heading: Een nieuw wachtwoord
+    subheading: Kies iets unieks van minstens tien tekens.
+    newPassword: Nieuw wachtwoord
+    repeatPassword: Herhaal wachtwoord
+    mismatch: De wachtwoorden zijn niet gelijk.
+    failed: Herstellen is mislukt.
+    submit: Wachtwoord opslaan
+  invite:
+    title: Uitnodiging
+    heading: Er staat een stoel klaar
+    subheading: Je bent uitgenodigd om samen een wereld te bouwen.
+    opening: Openen…
+    acceptAs: Accepteer als {{name}}
+    login: Log in om te accepteren
+    noAccount: Nog geen account?
+    create: Maak er een
+    failed: Uitnodiging accepteren is mislukt.
+campaigns:
+  title: Campagnes
+  logout: Uitloggen
+  welcome: Welkom terug,
+  summary: De ovens zijn koud. Je leidt {{gmCount}} {{campaignLabel}} en speelt mee in {{playerCount}}.
+  campaign: campagne
+  campaigns: campagnes
+  new: Nieuwe campagne
+  newNote: Een lege wereld, klaar voor de eerste sessie
+  loadingSettings: Instellingen laden…
+  defaultNote: Een wereld die wacht op het volgende verhaal.
+  players: spelers
+  youAreGm: Jij bent spelleider
+  youPlay: Jij speelt mee
+  settingsFor: Instellingen voor {{title}}
+  nodes: nodes
+  sessions: sessies
+  roleGm: Spelleider
+  rolePlayer: Speler
+campaign:
+  new:
+    eyebrow: Een lege wereld
+    title: Nieuwe campagne
+    name: Naam
+    namePlaceholder: Naam van de campagne
+    system: Spelsysteem
+    otherSystem: Anders
+    note: Korte omschrijving
+    notePlaceholder: Waar gaat deze wereld over?
+    hint: Jij wordt spelleider. Anderen nodig je hierna uit.
+    creating: Wereld maken…
+    submit: Beginnen
+    failed: Aanmaken is mislukt.
+  settings:
+    eyebrow: Campagne-instellingen
+    deleteCampaign: Campagne verwijderen
+    deleteConfirm: Deze campagne naar de prullenbak verplaatsen?
+    general: Algemeen
+    membersTab: Wie speelt mee
+    rightsTab: Rechten
+    name: Naam
+    system: Systeem
+    description: Omschrijving
+    saveChanges: Wijzigingen opslaan
+    members: Leden
+    removeMember: Verwijderen
+    invitePerson: Iemand uitnodigen
+    optionalName: Naam (optioneel)
+    invite: Uitnodigen
+    inviteEmail: E-mailadres
+    standard: Standaard
+    open: Alles open
+    strict: Streng
+    rightsHint: De spelleider mag altijd alles. Deze schakelaars gelden voor spelers.
+    saveRights: Rechten opslaan
+    saved: Opgeslagen.
+    saveFailed: Opslaan is mislukt.
+    groups:
+      world: De wereld
+      sessions: Sessies
+      maps: Kaarten
+      secrets: Geheimen
+      management: Beheer
+    rights:
+      create: Nodes aanmaken
+      edit: Nodes bewerken
+      link: Nodes koppelen
+      delete: Verwijderen
+      image: Afbeeldingen toevoegen
+      write: Sessies schrijven
+      session: Sessies starten
+      history: Versies terugzetten
+      mapUpload: Kaarten uploaden
+      pin: Markers plaatsen
+      reveal: Onthullen en verbergen
+      seeSecret: Geheimen inzien
+      dmNotes: DM-notities lezen
+      invite: Mensen uitnodigen
+      settings: Instellingen wijzigen
+navigation:
+  label: Hoofdweergaven
+  graph: Graph
+  session: Sessie
+  story: Verhaal
+  atlas: Kaart
+workspace:
+  togglePanel: Paneel tonen of verbergen
+  backToCampaigns: Terug naar campagnes
+  viewingAs: Bekijkt als
+  view: Weergave
+  viewAs: Bekijk de campagne als
+  toggleTheme: Wissel kleurthema
+  readonlyAs: 'Alleen-lezen: je bekijkt de wereld als {{name}}.'
+  gmView: Spelleiderweergave actief.
+  linkAdded: Koppeling gelegd.
+  linkRemoved: Koppeling verwijderd.
+  context:
+    connect: Verbinden met…
+    showGraph: Toon in de graph
+    trash: Naar prullenbak
+    newHere: Nieuwe node hier
+graph:
+  ariaLabel: Interactieve kennisgraaf
+  fit: Alles passend
+  reflow: Kaart opnieuw ordenen
+  addNode: Node
+  detailsFor: Details van {{title}}
+  noSummary: Nog geen samenvatting.
+  hide: Verberg
+  reveal: Onthul
+  connect: Verbinden met een andere node
+  showOnMap: Tonen op de kaart
+  nodeAdded: Node toegevoegd.
+node:
+  name: Nodenaam
+  summary: Samenvatting
+  summaryPlaceholder: Eén regel over deze node
+  type: Type
+  size: Grootte
+  visibility: Zichtbaarheid
+  revealed: Onthuld aan spelers
+  connect: Verbinden
+  createTitle: Nieuwe node
+  create: Node maken
+  creating: Node maken…
+  overview: Overzicht
+  game: Spel
+  relations: Relaties
+  story: Verhaal
+  notes: Notities
+  description: Beschrijving
+  image: Afbeelding
+  map: Kaart
+  stats: Eigenschappen
+  gear: Uitrusting
+  history: Geschiedenis
+  dossierClose: Dossier sluiten
+  uploadImage: Afbeelding uploaden
+  uploadMap: Kaart uploaden
+  noRelations: Nog geen relaties.
+  relatedSessions: Sessies waarin deze node voorkomt
+  typeAdded: Nodetype {{name}} toegevoegd.
+  typeRemoved: Nodetype verwijderd.
+  saved: Opgeslagen
+  mentionHint: Typ @ om te koppelen
+  addImage: Afbeelding toevoegen
+  everyone: Iedereen
+  selected: Gekozen
+  onlyMe: Alleen ik
+  yourDescription: Jouw beschrijving
+  sharedAtTable: Gedeeld met de tafel
+  privateForYou: Alleen voor jou
+  descriptionPlaceholder: Wat weet jij over deze node?
+  showOthers: Toon wat anderen schreven · {{count}}
+  newNote: Nieuwe notitie…
+  addNote: Toevoegen
+  mapAvailable: Deze kaart is ook beschikbaar in de kaartweergave.
+  mapFor: Een kaart voor {{title}}
+  mapUploadHint: Upload een afbeelding en plaats er nodes als markers op.
+  statistics: Statistieken
+  addRow: regel
+  item: Voorwerp
+  note: Notitie
+  saveGame: Spelgegevens opslaan
+  linked: Gekoppeld · {{count}}
+  unlink: Loskoppelen
+  connectSearch: Zoek om te verbinden…
+  mentionedTogether: Samen genoemd in sessies
+  notMentioned: Nog niet genoemd in een sessie.
+  inStory: In het verhaal · {{count}}
+  notInStory: Deze node komt nog niet in het verhaal voor.
+  postKind:
+    note: Notitie
+    theory: Theorie
+    goal: Doel
+  postVisibility:
+    me: Alleen ik
+    all: Iedereen
+    gm: DM
+    sel: Gekozen
+explorer:
+  label: Explorerpaneel
+  explorer: Explorer
+  recent: Recent
+  search: Zoeken
+  settings: Instellingen
+  newNode: Nieuwe node
+  closePanel: Paneel sluiten
+  empty: Nog geen nodes.
+  forces: Krachten
+  repel: Afstoting
+  distance: Afstand
+  grouping: Groepering
+  gravity: Zwaartekracht
+  linkLength: Linklengte
+  center: Middelpunt
+  more: Nog {{count}} · gebruik zoeken
+  nothingOpened: Nog niets geopend.
+  searchPlaceholder: Zoek nodes…
+  nothingFound: Niets gevonden.
+  reflow: Herschik de kaart
+  display: Weergave
+  lightTheme: Licht thema
+  campaignSettings: Campagne-instellingen
+search:
+  title: Zoeken
+  placeholder: Zoek nodes, tags en samenvattingen…
+  noResults: Geen resultaten gevonden.
+  close: Zoeken sluiten
+  worldPlaceholder: Zoek in deze wereld…
+  prompt: Typ een naam, plek, quest of voorwerp.
+session:
+  defaultTitle: Sessie {{number}}
+  newTitle: Nieuwe sessie
+  newEyebrow: Een nieuw hoofdstuk
+  titlePlaceholder: Sessie {{number}} · Titel
+  start: Sessie starten
+  title: Sessietitel
+  notesForMentions: Notities bij genoemde nodes
+  scratch: Persoonlijk sessieklad
+  noSession: Start een sessie om samen te schrijven.
+  sequence: Sessie {{number}}
+  history: Geschiedenis
+  trash: Naar prullenbak
+  worldDate: Datum in de spelwereld
+  editorPlaceholder: Wat gebeurt er aan tafel? Typ @ om iemand of iets te noemen…
+  unconnected: Uit deze sessie · nog niet verbonden
+  connectAll: Alle {{count}}
+  privateNotes: Aantekeningen · alleen {{name}}
+  privateHint: Persoonlijk klad, niemand anders ziet dit.
+  privatePlaceholder: Eigen aantekeningen…
+  relatedNotes: Notities bij genoemde nodes
+  emptyHeading: De eerste bladzijde is leeg
+  emptyText: Start een sessie en leg samen vast wat er gebeurt.
+  first: Eerste sessie starten
+story:
+  title: Doorlopend verhaal
+  empty: Nog geen afgeronde sessies.
+  heading: Aan tafel verteld
+  count: '{{count}} sessies'
+  privateNotes: Aantekeningen · alleen {{name}}
+  noSessions: Nog geen sessies om te vertellen.
+editor:
+  placeholder: Begin te schrijven…
+  ariaLabel: Teksteditor
+  secretNode: Geheime node
+  secret: geheim
+  openNode: '{{title}} openen'
+  connectTo: Koppel aan {{title}}
+  newNode: 'Nieuw: {{title}}'
+  noResults: Geen resultaten
+atlas:
+  fit: Kaart passend
+  zoomIn: Inzoomen
+  zoomOut: Uitzoomen
+  upload: Kaart uploaden
+  mapOf: Kaart van {{title}}
+  lockMarker: Marker vergrendelen
+  unlockMarker: Marker ontgrendelen
+  removeMarker: Van kaart verwijderen
+  empty: Upload een kaart om locaties te plaatsen.
+  ariaLabel: Interactieve campagnekaart
+  emptyHeading: Leg de wereld op tafel
+  emptyText: Upload een kaart en sleep nodes uit de explorer naar hun plek.
+  openDossier: Dossier openen
+  release: Losmaken
+  lock: Vastzetten
+  remove: Van kaart halen
+connection:
+  title: Verbinden met {{title}}
+  eyebrow: Koppelingen leggen
+  placeholder: Zoek nodes…
+  noResults: Geen andere nodes gevonden.
+  hint: Blijf nodes aantikken; dit venster blijft open.
+createNode:
+  eyebrow: Breid de wereld uit
+  title: Nieuwe node
+  name: Naam
+  connect: Direct verbinden met
+  searchMultiple: Zoek nodes… meerdere mag
+  visible: Zichtbaar
+  everyone: Iedereen
+  selected: Gekozen
+  onlyMe: Alleen ik
+  adding: Toevoegen…
+  add: Toevoegen
+trash:
+  title: Prullenbak
+  empty: De prullenbak is leeg.
+  emptyLong: Leeg. Verwijderde nodes en sessies komen hier terecht.
+  permanentlyDelete: Definitief verwijderen
+  confirmNode: '{{title}} definitief verwijderen?'
+  confirmSession: '{{title}} definitief verwijderen?'
+history:
+  title: Versiegeschiedenis
+  restore: Deze versie herstellen
+  empty: Nog geen versies beschikbaar.
+  eyebrow: Geschiedenis
+  loading: Laden…
+  restoreShort: Zet terug
+  tooLong: Deze versie is te lang voor een woordvergelijking; terugzetten kan gewoon.
+  pick: Kies links een versie.
+nodeTypeManager:
+  title: Nodetypes · {{count}}
+  ownType: Eigen type
+  addFailed: Type toevoegen is mislukt.
+  removeLabel: '{{name}} verwijderen'
+  removeConfirm: Type {{name}} verwijderen?
+  singularPlaceholder: Enkelvoud, bv. Schip
+  pluralPlaceholder: Meervoud, bv. Schepen
+  color: Kleur {{color}}
+  adding: Toevoegen…
+  add: Type toevoegen
+nodeTypes:
+  faction: { plural: Facties, singular: Factie }
+  building: { plural: Gebouwen, singular: Gebouw }
+  deity: { plural: Goden, singular: Godheid }
+  location: { plural: Locaties, singular: Locatie }
+  lore: { plural: Lore, singular: Lore }
+  monster: { plural: Monsters, singular: Monster }
+  npc: { plural: "NPC's", singular: NPC }
+  character: { plural: Personages, singular: Personage }
+  quest: { plural: Quests, singular: Quest }
+  item: { plural: Voorwerpen, singular: Voorwerp }
+  region: { plural: "Regio's", singular: Regio }
+  session: { plural: Sessies, singular: Sessie }
+server:
+  invalidOrigin: Ongeldige request origin.
+  loginRequired: Log in om verder te gaan.
+  invalidJson: Ongeldige JSON.
+  invalidInput: Ongeldige invoer.
+  validEmail: Vul een geldig e-mailadres in.
+  nameMin: Vul minstens 2 tekens in.
+  passwordMin: Gebruik minstens 10 tekens.
+  tooManyMinutes: Te veel pogingen. Probeer het over enkele minuten opnieuw.
+  tooManyLater: Te veel pogingen. Probeer het later opnieuw.
+  loginFailed: E-mailadres of wachtwoord klopt niet.
+  accountExists: Er bestaat al een account met dit e-mailadres.
+  resetExpired: Deze herstellink is verlopen of al gebruikt.
+  recoverySent: Als dit account bestaat, is de herstelmail onderweg.
+  campaignNotFound: Campagne niet gevonden.
+  forbidden: Je hebt hier geen rechten voor.
+  deleteCampaignGmOnly: Alleen een spelleider kan een campagne verwijderen.
+  campaignNeedsGm: Deze campagne heeft geen spelleider.
+  viewAsGmOnly: Alleen een spelleider kan de wereld als een andere speler bekijken.
+  playerNotFound: Speler niet gevonden.
+  invitationExpired: Deze uitnodiging is verlopen of al gebruikt.
+  rolesGmOnly: Alleen een spelleider kan rollen aanpassen.
+  promoteOtherGm: Maak eerst iemand anders spelleider.
+  cannotRemovePlayer: Je kunt deze speler niet verwijderen.
+  invalidNodeType: Ongeldig nodetype.
+  purgeGmOnly: Alleen een spelleider kan definitief verwijderen.
+  trashNodeFirst: Zet de node eerst in de prullenbak.
+  selfLink: Een node kan niet met zichzelf verbinden.
+  linkNotFound: Koppeling niet gevonden.
+  trashSessionFirst: Zet de sessie eerst in de prullenbak.
+  nodeTypeExists: Er bestaat al een nodetype met deze naam.
+  builtinType: Ingebouwde types kunnen niet verwijderd worden.
+  typeInUse: Dit type wordt nog door nodes gebruikt.
+  versionNotFound: Versie niet gevonden.
+  nodeNotFound: Node niet gevonden.
+  someNodesNotFound: Een van de nodes bestaat niet.
+  sessionNotFound: Sessie niet gevonden.
+  fileOrCampaignMissing: Bestand of campagne ontbreekt.
+  unsupportedImage: Gebruik JPEG, PNG, WebP of GIF.
+  imageTooLarge: Afbeeldingen mogen maximaal {{size}} MB zijn.
+  imageNotFound: Afbeelding niet gevonden.
+  imageMissingFromStorage: Afbeelding ontbreekt in de opslag.
+  invalidVersionQuery: Ongeldige versiequery.
+  versionMissing: Versie ontbreekt.
+  invitationTokenMissing: Uitnodigingstoken ontbreekt.
+  resetTokenMissing: Hersteltoken ontbreekt.
+email:
+  reset:
+    subject: Stel je Atlore-wachtwoord opnieuw in
+    text: |-
+      Gebruik deze link om je wachtwoord opnieuw in te stellen: {{url}}
+
+      De link verloopt over één uur.
+    intro: Gebruik de onderstaande link om je Atlore-wachtwoord opnieuw in te stellen.
+    button: Wachtwoord opnieuw instellen
+    expiry: De link verloopt over één uur.
+  invite:
+    subject: Uitnodiging voor {{campaign}} in Atlore
+    text: 'Je bent uitgenodigd voor {{campaign}}. Accepteer via: {{url}}'
+    intro: Je bent uitgenodigd voor <strong>{{campaign}}</strong>.
+    button: Uitnodiging accepteren
+errors:
+  saveFailed: Opslaan is mislukt.
+  createFailed: Aanmaken is mislukt.
+  uploadFailed: Uploaden is mislukt.

@@ -3,6 +3,7 @@
   import AuthShell from '$lib/components/auth/AuthShell.svelte';
   import AuthFormMessage from '$lib/components/auth/AuthFormMessage.svelte';
   import { api } from '$lib/client/api';
+  import { t } from '$lib/i18n/index.svelte';
   let { data }: { data: { token: string; user: { name: string } | null } } = $props();
   let busy = $state(false);
   let message = $state('');
@@ -16,29 +17,28 @@
       });
       await goto(`/campaigns/${result.campaignId}`, { invalidateAll: true });
     } catch (cause) {
-      message = cause instanceof Error ? cause.message : 'Uitnodiging accepteren is mislukt.';
+      message = cause instanceof Error ? cause.message : t('auth.invite.failed');
     } finally {
       busy = false;
     }
   }
 </script>
 
-<svelte:head><title>Uitnodiging · Atlore</title></svelte:head>
-<AuthShell
-  heading="Er staat een stoel klaar"
-  subheading="Je bent uitgenodigd om samen een wereld te bouwen."
->
+<svelte:head><title>{t('auth.invite.title')} · Atlore</title></svelte:head>
+<AuthShell heading={t('auth.invite.heading')} subheading={t('auth.invite.subheading')}>
   {#if data.user}<button class="primary-button accept" disabled={busy} onclick={accept}
-      >{busy ? 'Openen…' : `Accepteer als ${data.user.name}`}</button
+      >{busy
+        ? t('auth.invite.opening')
+        : t('auth.invite.acceptAs', { name: data.user.name })}</button
     >{:else}<a
       class="primary-button login"
       href={`/auth/login?next=${encodeURIComponent(`/invite?token=${data.token}`)}`}
-      >Log in om te accepteren</a
+      >{t('auth.invite.login')}</a
     >
     <p>
-      Nog geen account? <a
-        href={`/auth/register?next=${encodeURIComponent(`/invite?token=${data.token}`)}`}
-        >Maak er een</a
+      {t('auth.invite.noAccount')}
+      <a href={`/auth/register?next=${encodeURIComponent(`/invite?token=${data.token}`)}`}
+        >{t('auth.invite.create')}</a
       >
     </p>{/if}{#if message}<AuthFormMessage {message} />{/if}
 </AuthShell>

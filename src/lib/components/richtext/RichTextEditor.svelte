@@ -3,14 +3,15 @@
   import { searchNodes, fold } from '$lib/domain/search';
   import { normalizeBody } from '$lib/domain/text';
   import type { NodeType, Paragraph, WorldNode } from '$lib/types';
+  import { nodeTypeLabel, t } from '$lib/i18n/index.svelte';
 
   let {
     body,
     nodes,
     types,
-    placeholder = 'Begin te schrijven…',
+    placeholder = '',
     readonly = false,
-    ariaLabel = 'Teksteditor',
+    ariaLabel = '',
     onChange,
     openNode,
     createNode
@@ -74,7 +75,7 @@
     const element = document.createElement('span');
     element.dataset.ref = id;
     element.contentEditable = 'false';
-    element.textContent = node?.title ?? '✦ geheim';
+    element.textContent = node?.title ?? `✦ ${t('editor.secret')}`;
     const color = node ? typeMap.get(node.type)?.colorDark : 'var(--text-3)';
     element.style.setProperty('--ref-color', color ?? 'var(--text-3)');
     return element;
@@ -233,7 +234,7 @@
       const span = document.createElement('span');
       span.dataset.maybe = match.node.id;
       span.textContent = value;
-      span.title = `Koppel aan ${match.node.title}`;
+      span.title = t('editor.connectTo', { title: match.node.title });
       text.replaceWith(document.createTextNode(before), span, document.createTextNode(after));
     }
   }
@@ -248,8 +249,8 @@
     role="textbox"
     tabindex={readonly ? -1 : 0}
     aria-multiline="true"
-    aria-label={ariaLabel}
-    data-placeholder={placeholder}
+    aria-label={ariaLabel || t('editor.ariaLabel')}
+    data-placeholder={placeholder || t('editor.placeholder')}
     oninput={changed}
     onkeydown={keydown}
     onclick={clicked}
@@ -264,15 +265,16 @@
           insert(node.id);
         }}
         ><span style:background={typeMap.get(node.type)?.colorDark}></span><b>{node.title}</b><small
-          >{typeMap.get(node.type)?.one}</small
+          >{typeMap.get(node.type) ? nodeTypeLabel(typeMap.get(node.type)!, 'singular') : ''}</small
         ></button
       >{/each}
     {#if canCreate}<button
         class="new"
         class:active={menu.index === results.length}
-        onpointerdown={createFromMenu}><span>+</span><b>Nieuw: {menu.query.trim()}</b></button
+        onpointerdown={createFromMenu}
+        ><span>+</span><b>{t('editor.newNode', { title: menu.query.trim() })}</b></button
       >{/if}
-    {#if !results.length && !canCreate}<div class="empty">Geen resultaten</div>{/if}
+    {#if !results.length && !canCreate}<div class="empty">{t('editor.noResults')}</div>{/if}
   </div>
 {/if}
 

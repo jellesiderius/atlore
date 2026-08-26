@@ -4,6 +4,7 @@
   import { bodyToText } from '$lib/domain/text';
   import { diffWords, type DiffPart } from '$lib/domain/diff';
   import type { Paragraph, VersionEntry } from '$lib/types';
+  import { i18n, t } from '$lib/i18n/index.svelte';
   let {
     title,
     currentBody,
@@ -33,19 +34,19 @@
   });
 </script>
 
-<Modal {title} eyebrow="Geschiedenis" {close} wide>
+<Modal {title} eyebrow={t('history.eyebrow')} {close} wide>
   <div class="history">
     <aside>
-      {#if busy}<p>Laden…</p>{/if}{#each versions as version}<button
+      {#if busy}<p>{t('history.loading')}</p>{/if}{#each versions as version}<button
           class:active={selected?.id === version.id}
           onclick={() => (selected = version)}
           ><span
-            >{new Date(version.createdAt).toLocaleString('nl-NL', {
+            >{new Date(version.createdAt).toLocaleString(i18n.locale, {
               dateStyle: 'medium',
               timeStyle: 'short'
             })}</span
           ><small>{version.byName}</small></button
-        >{/each}{#if !busy && !versions.length}<p>Nog geen versies.</p>{/if}
+        >{/each}{#if !busy && !versions.length}<p>{t('history.empty')}</p>{/if}
     </aside>
     <section>
       {#if selected}<header>
@@ -59,7 +60,7 @@
             onclick={async () => {
               await restore(selected!.id);
               close();
-            }}>Zet terug</button
+            }}>{t('history.restoreShort')}</button
           >
         </header>
         {#if diff}<div class="diff">
@@ -69,8 +70,8 @@
                 >{part.value}
               </span>{/each}
           </div>{:else}<p class="long">
-            Deze versie is te lang voor een woordvergelijking; terugzetten kan gewoon.
-          </p>{/if}{:else}<p class="pick">Kies links een versie.</p>{/if}
+            {t('history.tooLong')}
+          </p>{/if}{:else}<p class="pick">{t('history.pick')}</p>{/if}
     </section>
   </div>
 </Modal>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { NodeType, WorldLink, WorldNode } from '$lib/types';
+  import { t } from '$lib/i18n/index.svelte';
   import {
     connectedDepths,
     measureLinkScale,
@@ -758,7 +759,7 @@
   onwheel={wheel}
   ondblclick={doubleClick}
   oncontextmenu={contextmenu}
-  aria-label="Interactieve kennisgraaf"
+  aria-label={t('graph.ariaLabel')}
 ></canvas>
 
 <style>

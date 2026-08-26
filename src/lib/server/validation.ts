@@ -11,13 +11,13 @@ export const bodySchema = z
   .default([{ segs: [{ t: 'txt' as const, v: '' }] }]);
 
 export const registerSchema = z.object({
-  name: z.string().trim().min(2, 'Vul minstens 2 tekens in.').max(80),
-  email: z.email('Vul een geldig e-mailadres in.').max(254),
-  password: z.string().min(10, 'Gebruik minstens 10 tekens.').max(200)
+  name: z.string().trim().min(2).max(80),
+  email: z.email().max(254),
+  password: z.string().min(10).max(200)
 });
 
 export const loginSchema = z.object({
-  email: z.email('Vul een geldig e-mailadres in.').max(254),
+  email: z.email().max(254),
   password: z.string().min(1).max(200)
 });
 

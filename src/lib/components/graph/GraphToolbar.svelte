@@ -1,6 +1,7 @@
 <script lang="ts">
   import Icon from '$lib/components/ui/Icon.svelte';
   import { tooltip } from '$lib/actions/tooltip';
+  import { t } from '$lib/i18n/index.svelte';
   let {
     fit,
     reflow,
@@ -10,12 +11,12 @@
 </script>
 
 <div class="toolbar">
-  <button onclick={fit} aria-label="Alles passend" use:tooltip={'Alles passend'}
+  <button onclick={fit} aria-label={t('graph.fit')} use:tooltip={t('graph.fit')}
     ><Icon name="fit" size={16} /></button
-  ><button onclick={reflow} aria-label="Kaart opnieuw ordenen" use:tooltip={'Kaart opnieuw ordenen'}
+  ><button onclick={reflow} aria-label={t('graph.reflow')} use:tooltip={t('graph.reflow')}
     ><Icon name="undo" size={16} /></button
   >{#if canCreate}<span></span><button class="new" onclick={newNode}
-      ><Icon name="plus" size={15} /> Node</button
+      ><Icon name="plus" size={15} /> {t('graph.addNode')}</button
     >{/if}
 </div>
 

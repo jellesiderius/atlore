@@ -1,7 +1,9 @@
 <script lang="ts">
   import Icon from '$lib/components/ui/Icon.svelte';
+  import LanguageSwitcher from '$lib/components/ui/LanguageSwitcher.svelte';
   import { tooltip } from '$lib/actions/tooltip';
   import type { Campaign, CampaignMember } from '$lib/types';
+  import { t } from '$lib/i18n/index.svelte';
   let {
     campaign,
     panelOpen,
@@ -32,12 +34,12 @@
     <button
       class="icon-button"
       class:active={panelOpen}
-      aria-label="Paneel tonen of verbergen"
-      use:tooltip={'Paneel tonen of verbergen'}
+      aria-label={t('workspace.togglePanel')}
+      use:tooltip={t('workspace.togglePanel')}
       onclick={togglePanel}><Icon name="panel" size={17} /></button
     >
   </div>
-  <button class="campaign-title" onclick={exit} use:tooltip={'Terug naar campagnes'}
+  <button class="campaign-title" onclick={exit} use:tooltip={t('workspace.backToCampaigns')}
     ><Icon name="back" size={14} /><span
       ><small>{campaign.system}</small><b class="serif-title">{campaign.title}</b></span
     ></button
@@ -45,25 +47,26 @@
   <div class="header-actions">
     {#if canViewAs}
       <label class:viewing={viewAs} class="view-as">
-        <span>{viewAs ? 'Bekijkt als' : 'Weergave'}</span>
+        <span>{t(viewAs ? 'workspace.viewingAs' : 'workspace.view')}</span>
         <select
-          aria-label="Bekijk de campagne als"
+          aria-label={t('workspace.viewAs')}
           value={viewAs?.id ?? ''}
           onchange={(event) => changeView(event.currentTarget.value || null)}
         >
-          <option value="">Spelleider</option>
+          <option value="">{t('common.gameMaster')}</option>
           {#each members.filter((member) => member.role === 'player') as member}
             <option value={member.id}>{member.name}</option>
           {/each}
         </select>
       </label>
     {/if}
+    <LanguageSwitcher compact />
     <button
       class="theme"
       onclick={toggleTheme}
-      aria-label="Wissel kleurthema"
-      use:tooltip={'Wissel kleurthema'}>{theme === 'dark' ? '☾' : '☀'}</button
-    ><span class="role">{campaign.role === 'gm' ? 'Spelleider' : 'Speler'}</span>
+      aria-label={t('workspace.toggleTheme')}
+      use:tooltip={t('workspace.toggleTheme')}>{theme === 'dark' ? '☾' : '☀'}</button
+    ><span class="role">{t(campaign.role === 'gm' ? 'common.gameMaster' : 'common.player')}</span>
   </div>
 </header>
 
@@ -184,6 +187,9 @@
       max-width: calc(100% - 130px);
     }
     .header-actions .role {
+      display: none;
+    }
+    .header-actions :global(label.compact) {
       display: none;
     }
     .view-as span {
