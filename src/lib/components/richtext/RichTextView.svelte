@@ -53,7 +53,7 @@
   .rich-view {
     font-size: 15px;
     line-height: 1.74;
-    color: var(--text-2);
+    color: var(--text);
     user-select: text;
     -webkit-user-select: text;
   }

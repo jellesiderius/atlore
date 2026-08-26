@@ -9,6 +9,54 @@ async function openDemoCampaign(page: import('@playwright/test').Page) {
   await expect(page.getByLabel('Interactieve kennisgraaf')).toBeVisible();
 }
 
+test('secundaire dark-mode tekst behoudt leesbaar contrast', async ({ page }) => {
+  await page.goto('/auth/login');
+  const contrast = await page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    const rgb = (value: string) => {
+      const color = value.trim();
+      const channels = color.startsWith('#')
+        ? color
+            .slice(1)
+            .match(/.{2}/g)!
+            .map((channel) => Number.parseInt(channel, 16))
+        : color.match(/[\d.]+/g)!.slice(0, 3).map(Number);
+      return channels.map((channel) => channel / 255);
+    };
+    const luminance = (value: string) => {
+      const [red, green, blue] = rgb(value).map((channel) =>
+        channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+      );
+      return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+    };
+    const ratio = (foreground: string, background: string) => {
+      const light = Math.max(luminance(foreground), luminance(background));
+      const dark = Math.min(luminance(foreground), luminance(background));
+      return (light + 0.05) / (dark + 0.05);
+    };
+    const panel = root.getPropertyValue('--bg-3');
+    return {
+      tokens: {
+        canvas: root.getPropertyValue('--canvas').trim().toLowerCase(),
+        text: root.getPropertyValue('--text').trim().toLowerCase(),
+        secondary: root.getPropertyValue('--text-2').trim().toLowerCase(),
+        muted: root.getPropertyValue('--text-3').trim().toLowerCase()
+      },
+      secondary: ratio(root.getPropertyValue('--text-2'), panel),
+      muted: ratio(root.getPropertyValue('--text-3'), panel)
+    };
+  });
+
+  expect(contrast.tokens).toEqual({
+    canvas: '#1a1816',
+    text: '#eae8e6',
+    secondary: '#a19e9e',
+    muted: '#a19e9e'
+  });
+  expect(contrast.secondary).toBeGreaterThanOrEqual(4.5);
+  expect(contrast.muted).toBeGreaterThanOrEqual(4.5);
+});
+
 test('de auth-achtergrond bevat opstijgende vuurvonken', async ({ page }) => {
   await page.addInitScript(() => {
     Object.assign(window, { __atloreSparks: [] as { x: number; y: number }[] });
@@ -51,6 +99,9 @@ test('schrijf- en leesvlakken hebben een herkenbare componentstatus', async ({ p
   const writingSurfaces = page.getByLabel('Schrijfvlak');
   await expect(writingSurfaces).toHaveCount(2);
   const editor = page.getByRole('textbox', { name: 'Teksteditor' }).first();
+  await expect
+    .poll(() => editor.evaluate((element) => getComputedStyle(element).color))
+    .toBe('rgb(234, 232, 230)');
   const restingBorder = await writingSurfaces
     .first()
     .evaluate((element) => getComputedStyle(element).borderColor);
@@ -62,7 +113,13 @@ test('schrijf- en leesvlakken hebben een herkenbare componentstatus', async ({ p
     .not.toBe(restingBorder);
 
   await page.getByRole('button', { name: 'Verhaal', exact: true }).click();
-  await expect(page.getByLabel('Leesweergave').first()).toBeVisible();
+  const readingSurface = page.getByLabel('Leesweergave').first();
+  await expect(readingSurface).toBeVisible();
+  await expect
+    .poll(() =>
+      readingSurface.locator('.rich-view').evaluate((element) => getComputedStyle(element).color)
+    )
+    .toBe('rgb(234, 232, 230)');
 });
 
 test('tooltips en tekst-hoverinspectie volgen het prototype', async ({ page }, testInfo) => {

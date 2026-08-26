@@ -16,15 +16,15 @@
 
 :root {
   color-scheme: dark;
-  --canvas: #0d0f14;
-  --canvas-deep: #0b0d11;
-  --bg-2: #14171d;
-  --bg-3: #1b1f27;
-  --line: #262b35;
-  --line-2: #333a47;
-  --text: #e6e8ee;
-  --text-2: #9aa1af;
-  --text-3: #6b7280;
+  --canvas: #1a1816;
+  --canvas-deep: #141210;
+  --bg-2: #211f1d;
+  --bg-3: #292624;
+  --line: #37332f;
+  --line-2: #4a4540;
+  --text: #eae8e6;
+  --text-2: #a19e9e;
+  --text-3: #a19e9e;
   --ember: #f0913f;
   --ember-soft: rgba(240, 145, 63, 0.12);
   --danger: #d46f66;
@@ -114,7 +114,7 @@ a:hover {
 
 ::-webkit-scrollbar-thumb {
   border-radius: 4px;
-  background: #39404d;
+  background: var(--line-2);
 }
 
 ::-webkit-scrollbar-track {

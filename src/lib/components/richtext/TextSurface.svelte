@@ -102,6 +102,7 @@
   }
   .surface-content {
     padding: 15px 17px 17px;
+    color: var(--text);
   }
   .compact {
     border-radius: 10px;

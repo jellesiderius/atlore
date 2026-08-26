@@ -310,10 +310,10 @@
         context.strokeStyle = strong
           ? 'rgba(240,145,63,.88)'
           : lit
-            ? 'rgba(114,126,147,.42)'
+            ? 'rgba(161,158,158,.42)'
             : draggingFocus
-              ? 'rgba(68,76,91,.025)'
-              : 'rgba(68,76,91,.07)';
+              ? 'rgba(74,69,64,.025)'
+              : 'rgba(74,69,64,.07)';
         context.lineWidth = (strong ? 1.7 : lit ? 1 : 0.6) / camera.z;
         context.stroke();
       }
@@ -323,9 +323,9 @@
     appendLinkPath();
     context.strokeStyle = highlighted
       ? draggingFocus
-        ? 'rgba(68,76,91,.025)'
-        : 'rgba(68,76,91,.07)'
-      : 'rgba(114,126,147,.36)';
+        ? 'rgba(74,69,64,.025)'
+        : 'rgba(74,69,64,.07)'
+      : 'rgba(161,158,158,.36)';
     context.lineWidth = (highlighted ? 0.6 : 0.9) / camera.z;
     context.stroke();
     if (!focusId) return;
@@ -347,7 +347,7 @@
         emphasized.push(node);
         continue;
       }
-      const color = typeMap.get(node.type)?.colorDark ?? '#9aa1af';
+      const color = typeMap.get(node.type)?.colorDark ?? '#a19e9e';
       const alpha = highlighted ? (draggingFocus ? 0.07 : 0.14) : 0.88;
       const key = `${color}:${alpha}`;
       const group = groups.get(key) ?? { color, alpha, nodes: [] };
@@ -383,7 +383,7 @@
     const ox = ((camera.x % spacing) + spacing) % spacing,
       oy = ((camera.y % spacing) + spacing) % spacing;
     context.fillStyle =
-      getComputedStyle(document.documentElement).getPropertyValue('--line').trim() || '#262b35';
+      getComputedStyle(document.documentElement).getPropertyValue('--line').trim() || '#37332f';
     context.globalAlpha = focused ? 0.1 : 0.36;
     for (let x = ox; x < width; x += spacing)
       for (let y = oy; y < height; y += spacing) {
@@ -405,7 +405,7 @@
     const radius = radiusFor(node, degree);
     const dim = highlighted && !highlighted.has(node.id);
     const type = typeMap.get(node.type);
-    const color = type?.colorDark ?? '#9aa1af';
+    const color = type?.colorDark ?? '#a19e9e';
     context.globalAlpha = dim ? (draggingFocus ? 0.07 : 0.14) : node.id === focusId ? 1 : 0.88;
     context.shadowBlur = node.id === focusId ? 20 : highlighted?.has(node.id) ? 7 : 0;
     context.shadowColor = color;
@@ -440,7 +440,7 @@
     context.font = `500 ${fontSize}px "IBM Plex Sans",system-ui`;
     context.textAlign = 'center';
     context.textBaseline = 'top';
-    context.fillStyle = dim ? 'rgba(154,161,175,.2)' : '#b8bfca';
+    context.fillStyle = dim ? 'rgba(234,232,230,.2)' : '#eae8e6';
     context.fillText(shorten(node.title, 24), position.x, position.y + radius + 7 / camera.z);
   }
   function screenToWorld(x: number, y: number) {
