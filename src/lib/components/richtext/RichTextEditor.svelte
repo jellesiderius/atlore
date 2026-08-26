@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { searchNodes, fold } from '$lib/domain/search';
-  import { normalizeBody } from '$lib/domain/text';
+  import { findNodeTitleMatches, normalizeBody } from '$lib/domain/text';
   import type { NodeType, Paragraph, WorldNode } from '$lib/types';
   import { nodeTypeLabel, t } from '$lib/i18n/index.svelte';
 
@@ -207,47 +207,110 @@
   }
 
   function markSuggestions() {
-    if (!editor || readonly || nodes.length > 3_000) return;
-    const selection = document.getSelection();
-    const activeParagraph = selection?.anchorNode
-      ? (selection.anchorNode.parentElement?.closest('[contenteditable] > div') ??
-        selection.anchorNode.parentElement)
-      : null;
+    if (!editor || readonly || menu || nodes.length > 3_000) return;
     const candidates = nodes
-      .filter((node) => !node.trashedAt && node.title.length > 2)
+      .filter((node) => !node.trashedAt && node.type !== 'session' && node.title.length > 2)
       .sort((a, b) => b.title.length - a.title.length)
-      .slice(0, 400);
-    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
-    const textNodes: Text[] = [];
-    while (walker.nextNode()) {
-      const text = walker.currentNode as Text;
-      if (
-        text.parentElement?.closest('[data-ref],[data-maybe]') ||
-        text.parentElement === activeParagraph
-      )
-        continue;
-      textNodes.push(text);
-    }
-    for (const text of textNodes) {
-      const folded = fold(text.data);
-      let match: { node: WorldNode; start: number } | null = null;
-      for (const node of candidates) {
-        const start = folded.indexOf(fold(node.title));
-        if (start >= 0) {
-          match = { node, start };
-          break;
-        }
+      .slice(0, 400)
+      .map((node) => ({ id: node.id, title: node.title }));
+
+    const paragraphs = editor.children.length ? ([...editor.children] as HTMLElement[]) : [editor];
+    for (const paragraph of paragraphs) {
+      const offset = caretOffset(paragraph);
+      let changed = false;
+
+      for (const old of paragraph.querySelectorAll<HTMLElement>('[data-maybe]')) {
+        old.replaceWith(document.createTextNode(old.textContent ?? ''));
+        changed = true;
       }
-      if (!match) continue;
-      const before = text.data.slice(0, match.start);
-      const value = text.data.slice(match.start, match.start + match.node.title.length);
-      const after = text.data.slice(match.start + match.node.title.length);
-      const span = document.createElement('span');
-      span.dataset.maybe = match.node.id;
-      span.textContent = value;
-      span.title = t('editor.connectTo', { title: match.node.title });
-      text.replaceWith(document.createTextNode(before), span, document.createTextNode(after));
+      if (changed) paragraph.normalize();
+
+      const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
+      const textNodes: Text[] = [];
+      while (walker.nextNode()) {
+        const text = walker.currentNode as Text;
+        if (!text.parentElement?.closest('[data-ref]')) textNodes.push(text);
+      }
+
+      for (const text of textNodes) {
+        const matches = findNodeTitleMatches(text.data, candidates);
+        if (!matches.length) continue;
+
+        const fragment = document.createDocumentFragment();
+        let position = 0;
+        for (const match of matches) {
+          if (match.start > position)
+            fragment.append(document.createTextNode(text.data.slice(position, match.start)));
+          const span = document.createElement('span');
+          span.dataset.maybe = match.id;
+          span.textContent = text.data.slice(match.start, match.end);
+          span.title = t('editor.connectTo', { title: match.title });
+          fragment.append(span);
+          position = match.end;
+        }
+        if (position < text.data.length)
+          fragment.append(document.createTextNode(text.data.slice(position)));
+        text.replaceWith(fragment);
+        changed = true;
+      }
+
+      if (changed && offset !== null) restoreCaret(paragraph, offset);
     }
+  }
+
+  function caretOffset(paragraph: HTMLElement): number | null {
+    const selection = document.getSelection();
+    if (
+      !selection?.rangeCount ||
+      !selection.anchorNode ||
+      !paragraph.contains(selection.anchorNode)
+    )
+      return null;
+    const range = selection.getRangeAt(0).cloneRange();
+    range.selectNodeContents(paragraph);
+    range.setEnd(selection.anchorNode, selection.anchorOffset);
+    return range.toString().length;
+  }
+
+  function restoreCaret(paragraph: HTMLElement, offset: number) {
+    let remaining = offset;
+    const selection = document.getSelection();
+    const range = document.createRange();
+
+    const visit = (parent: Node): boolean => {
+      for (const child of parent.childNodes) {
+        if (child.nodeType === Node.TEXT_NODE) {
+          const length = child.textContent?.length ?? 0;
+          if (remaining <= length) {
+            range.setStart(child, remaining);
+            range.collapse(true);
+            return true;
+          }
+          remaining -= length;
+          continue;
+        }
+        if (!(child instanceof HTMLElement)) continue;
+        if (child.dataset.ref) {
+          const length = child.textContent?.length ?? 0;
+          if (remaining <= length) {
+            range.setStartAfter(child);
+            range.collapse(true);
+            return true;
+          }
+          remaining -= length;
+          continue;
+        }
+        if (visit(child)) return true;
+      }
+      return false;
+    };
+
+    if (!visit(paragraph)) {
+      range.selectNodeContents(paragraph);
+      range.collapse(false);
+    }
+    selection?.removeAllRanges();
+    selection?.addRange(range);
   }
 </script>
 

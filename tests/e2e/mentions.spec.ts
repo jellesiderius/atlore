@@ -19,23 +19,25 @@ test('een @ toont nodes en biedt daaronder een nieuwe node aan', async ({ page }
     });
     if (!response.ok) throw new Error(await response.text());
     const campaign = await response.json();
-    const nodeResponse = await fetch(`/api/campaigns/${campaign.id}/nodes`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        title: 'Bestaande testnode',
-        type: 'npc',
-        size: 'm',
-        summary: '',
-        revealed: true,
-        visibility: 'all',
-        visibleWith: [],
-        x: 0,
-        y: 0,
-        connectTo: []
-      })
-    });
-    if (!nodeResponse.ok) throw new Error(await nodeResponse.text());
+    for (const title of ['Bestaande testnode', 'Jan', 'Kees', 'Kare', 'Bertje', 'Klaas']) {
+      const nodeResponse = await fetch(`/api/campaigns/${campaign.id}/nodes`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          type: 'npc',
+          size: 'm',
+          summary: '',
+          revealed: true,
+          visibility: 'all',
+          visibleWith: [],
+          x: 0,
+          y: 0,
+          connectTo: []
+        })
+      });
+      if (!nodeResponse.ok) throw new Error(await nodeResponse.text());
+    }
     const sessionResponse = await fetch(`/api/campaigns/${campaign.id}/sessions`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -50,6 +52,27 @@ test('een @ toont nodes en biedt daaronder een nieuwe node aan', async ({ page }
     await page.getByRole('button', { name: 'Sessie', exact: true }).click();
     const editor = page.getByRole('textbox', { name: 'Teksteditor' }).first();
     await editor.click();
+
+    await editor.pressSequentially(
+      'jan en kees en kare en bertje Toen jan2 jan2 en jan janjan jan klaas kees'
+    );
+    await page.locator('input.title').click();
+    const suggestions = editor.locator('[data-maybe]');
+    await expect(suggestions).toHaveCount(8);
+    await expect(suggestions).toHaveText([
+      'jan',
+      'kees',
+      'kare',
+      'bertje',
+      'jan',
+      'jan',
+      'klaas',
+      'kees'
+    ]);
+
+    await editor.click();
+    await editor.press('ControlOrMeta+A');
+    await editor.press('Backspace');
     await editor.pressSequentially('@');
 
     const menu = page.getByRole('listbox');

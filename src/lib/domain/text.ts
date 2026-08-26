@@ -2,6 +2,60 @@ import type { Paragraph, Segment } from '$lib/types';
 
 export const EMPTY_BODY: Paragraph[] = [{ segs: [{ t: 'txt', v: '' }] }];
 
+export interface NodeTitleCandidate {
+  id: string;
+  title: string;
+}
+
+export interface NodeTitleMatch extends NodeTitleCandidate {
+  start: number;
+  end: number;
+}
+
+const WORD_CHARACTER = /[\p{L}\p{N}]/u;
+
+function normalizeForMatching(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('nl');
+}
+
+export function findNodeTitleMatches(
+  text: string,
+  candidates: NodeTitleCandidate[]
+): NodeTitleMatch[] {
+  const normalizedText = normalizeForMatching(text);
+  const titles = candidates
+    .map((candidate) => ({
+      ...candidate,
+      title: candidate.title.trim(),
+      normalized: normalizeForMatching(candidate.title.trim())
+    }))
+    .filter((candidate) => candidate.normalized.length > 2)
+    .sort((a, b) => b.normalized.length - a.normalized.length);
+  const matches: NodeTitleMatch[] = [];
+
+  for (let index = 0; index < normalizedText.length;) {
+    const match = titles.find(
+      (candidate) =>
+        normalizedText.startsWith(candidate.normalized, index) &&
+        !WORD_CHARACTER.test(normalizedText[index - 1] ?? ' ') &&
+        !WORD_CHARACTER.test(normalizedText[index + candidate.normalized.length] ?? ' ')
+    );
+    if (!match) {
+      index += 1;
+      continue;
+    }
+
+    const end = index + match.normalized.length;
+    matches.push({ id: match.id, title: match.title, start: index, end });
+    index = end;
+  }
+
+  return matches;
+}
+
 export function normalizeBody(value: unknown): Paragraph[] {
   if (!Array.isArray(value)) return structuredClone(EMPTY_BODY);
   const paragraphs = value
