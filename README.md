@@ -103,7 +103,7 @@ Composer is bewust niet opgenomen: Atlore bevat geen PHP-runtime of PHP-packages
 
 ## Vertalingen en snippets
 
-Alle interface-, fout- en e-mailteksten staan per taal in `src/lib/i18n/locales/nl.yml` en `src/lib/i18n/locales/en.yml`. Nederlands is de standaardtaal. De taalkeuze wordt in `localStorage` én de cookie `atlore_locale` bewaard, zodat zowel Svelte-componenten als serverresponses en e-mails dezelfde taal gebruiken.
+Alle interface-, fout- en e-mailteksten staan per taal in `src/lib/i18n/locales/nl.yaml` en `src/lib/i18n/locales/en.yaml`. Nederlands is de standaardtaal. De taalkeuze wordt in `localStorage` én de cookie `atlore_locale` bewaard, zodat zowel Svelte-componenten als serverresponses en e-mails dezelfde taal gebruiken.
 
 Voeg een tekst in beide YML-bestanden onder dezelfde semantische sleutel toe:
 

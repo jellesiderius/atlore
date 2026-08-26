@@ -1,5 +1,5 @@
-import nl from './locales/nl.yml';
-import en from './locales/en.yml';
+import nl from './locales/nl.yaml';
+import en from './locales/en.yaml';
 
 export const SUPPORTED_LOCALES = ['nl', 'en'] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
