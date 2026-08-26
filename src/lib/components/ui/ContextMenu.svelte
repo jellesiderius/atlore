@@ -9,26 +9,65 @@
   }
   let { x, y, items, close }: { x: number; y: number; items: MenuItem[]; close: () => void } =
     $props();
+  let menu = $state<HTMLDivElement>();
+  let left = $state(0);
+  let top = $state(0);
+
   onMount(() => {
-    const listener = () => close();
-    setTimeout(() => document.addEventListener('pointerdown', listener), 0);
-    return () => document.removeEventListener('pointerdown', listener);
+    const place = () => {
+      if (!menu) return;
+      const bounds = menu.getBoundingClientRect();
+      left = Math.max(8, Math.min(x, innerWidth - bounds.width - 8));
+      top = Math.max(8, Math.min(y, innerHeight - bounds.height - 8));
+    };
+    const outside = (event: PointerEvent) => {
+      if (menu && !menu.contains(event.target as Node)) close();
+    };
+    const keyboard = (event: KeyboardEvent) => {
+      if (!menu) return;
+      const buttons = [...menu.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];
+      const current = buttons.indexOf(document.activeElement as HTMLButtonElement);
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close();
+      } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        const delta = event.key === 'ArrowDown' ? 1 : -1;
+        buttons[(current + delta + buttons.length) % buttons.length]?.focus();
+      } else if (event.key === 'Home' || event.key === 'End') {
+        event.preventDefault();
+        buttons[event.key === 'Home' ? 0 : buttons.length - 1]?.focus();
+      }
+    };
+    place();
+    menu?.querySelector<HTMLButtonElement>('button')?.focus();
+    document.addEventListener('pointerdown', outside);
+    document.addEventListener('keydown', keyboard);
+    window.addEventListener('resize', place);
+    return () => {
+      document.removeEventListener('pointerdown', outside);
+      document.removeEventListener('keydown', keyboard);
+      window.removeEventListener('resize', place);
+    };
   });
 </script>
 
 <div
+  bind:this={menu}
   class="menu"
-  style:left={`${Math.min(x, innerWidth - 230)}px`}
-  style:top={`${Math.min(y, innerHeight - items.length * 38 - 20)}px`}
+  style:left={`${left}px`}
+  style:top={`${top}px`}
   role="menu"
   tabindex="-1"
   oncontextmenu={(event) => event.preventDefault()}
 >
   {#each items as item}<button
+      type="button"
+      role="menuitem"
       class:danger={item.danger}
-      onclick={() => {
-        item.run();
+      onclick={async () => {
         close();
+        await item.run();
       }}><Icon name={item.icon} size={15} /><span>{item.label}</span></button
     >{/each}
 </div>

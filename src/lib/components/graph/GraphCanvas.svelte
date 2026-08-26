@@ -32,7 +32,13 @@
     onSelect: (id: string | null, clientX?: number, clientY?: number) => void;
     onOpen: (id: string) => void;
     onCreate: (x: number, y: number) => void;
-    onContext?: (id: string | null, x: number, y: number) => void;
+    onContext?: (
+      id: string | null,
+      clientX: number,
+      clientY: number,
+      worldX: number,
+      worldY: number
+    ) => void;
     onMove?: (id: string, x: number, y: number) => void;
   } = $props();
   let canvas: HTMLCanvasElement;
@@ -432,6 +438,7 @@
     return found;
   }
   function down(event: PointerEvent) {
+    if (event.button !== 0) return;
     finishIntro();
     canvas.setPointerCapture(event.pointerId);
     const rect = canvas.getBoundingClientRect(),
@@ -537,10 +544,12 @@
   }
   function contextmenu(event: MouseEvent) {
     event.preventDefault();
+    pointer = null;
     const rect = canvas.getBoundingClientRect(),
       x = event.clientX - rect.left,
       y = event.clientY - rect.top;
-    onContext?.(nodeAt(x, y)?.id ?? null, event.clientX, event.clientY);
+    const world = screenToWorld(x, y);
+    onContext?.(nodeAt(x, y)?.id ?? null, event.clientX, event.clientY, world.x, world.y);
   }
   export function fitView() {
     if (!activeNodes.length || !width || !height) return;
@@ -584,6 +593,16 @@
       })),
       settings: { ...settings, iterations: activeNodes.length < 900 ? 700 : 160 }
     });
+  }
+
+  export function centerOn(id: string, minimumZoom = 1) {
+    const position = positions.get(id);
+    if (!position || !width || !height) return;
+    camera.z = Math.max(camera.z, minimumZoom);
+    camera.x = width / 2 - position.x * camera.z;
+    camera.y = height / 2 - position.y * camera.z;
+    userMoved = true;
+    requestDraw();
   }
   function startLayout(alpha: number, fit = false) {
     simulationMode = 'layout';

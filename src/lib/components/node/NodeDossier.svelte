@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from '$lib/components/ui/Icon.svelte';
+  import type { MenuItem } from '$lib/components/ui/ContextMenu.svelte';
   import { tooltip } from '$lib/actions/tooltip';
   import RichTextEditor from '$lib/components/richtext/RichTextEditor.svelte';
   import RichTextView from '$lib/components/richtext/RichTextView.svelte';
@@ -44,7 +45,9 @@
     addPost,
     upload,
     showHistory,
-    createMention
+    createMention,
+    showContext,
+    showNodeContext
   }: {
     node: WorldNode;
     nodes: WorldNode[];
@@ -77,6 +80,8 @@
     upload: (file: File, purpose: 'image' | 'map') => Promise<MediaAsset>;
     showHistory: () => void;
     createMention: (title: string, insert: (id: string) => void) => void;
+    showContext: (x: number, y: number, items: MenuItem[]) => void;
+    showNodeContext: (id: string, x: number, y: number, items?: MenuItem[]) => void;
   } = $props();
   let tab = $state<'overview' | 'map' | 'game' | 'relations' | 'story'>('overview');
   // svelte-ignore state_referenced_locally -- the keyed dossier owns its edit buffer
@@ -300,6 +305,8 @@
         onChange={saveBody}
         {openNode}
         createNode={createMention}
+        {showContext}
+        {showNodeContext}
       />
       {#if others.length}<details>
           <summary>{t('node.showOthers', { count: others.length })}</summary

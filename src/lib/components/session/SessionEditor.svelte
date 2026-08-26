@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { onDestroy, onMount } from 'svelte';
   import Icon from '$lib/components/ui/Icon.svelte';
+  import type { MenuItem } from '$lib/components/ui/ContextMenu.svelte';
   import RichTextEditor from '$lib/components/richtext/RichTextEditor.svelte';
   import { debounce } from '$lib/client/api';
   import { referencedNodeIds } from '$lib/domain/text';
@@ -35,7 +37,9 @@
     createSession,
     trash,
     history,
-    connect
+    connect,
+    showContext,
+    showNodeContext
   }: {
     session: SessionEntry | null;
     sessions: SessionEntry[];
@@ -53,12 +57,14 @@
     openNode: (id: string) => void;
     createMention: (title: string, insert: (id: string) => void) => void;
     pick: (id: string) => void;
-    save: (value: Record<string, unknown>) => Promise<void>;
-    saveScratch: (body: Paragraph[]) => Promise<void>;
+    save: (sessionId: string, value: Record<string, unknown>, keepalive?: boolean) => Promise<void>;
+    saveScratch: (sessionId: string, body: Paragraph[], keepalive?: boolean) => Promise<void>;
     createSession: () => void;
     trash: () => void;
     history: () => void;
     connect: (a: string, b: string) => Promise<void>;
+    showContext: (x: number, y: number, items: MenuItem[]) => void;
+    showNodeContext: (id: string, x: number, y: number, items?: MenuItem[]) => void;
   } = $props();
   // svelte-ignore state_referenced_locally -- the keyed session editor owns its edit buffer
   let title = $state(session?.title ?? '');
@@ -75,24 +81,77 @@
   );
   let pairs = $derived(buildPairs([...refs], linkedPairs).slice(0, 8));
   let relatedPosts = $derived(posts.filter((post) => refs.has(post.nodeId)));
+  // svelte-ignore state_referenced_locally -- this keyed editor must keep saving to its owning session
+  const ownedSessionId = session?.id ?? '';
+  let keepalive = false;
+  let dirtyBody = false;
+  let dirtyNotes = false;
+  let mounted = false;
   const saveBody = debounce(async (body: Paragraph[]) => {
-    sessionBody = body;
-    await save({ body });
+    if (!ownedSessionId) return;
+    await save(ownedSessionId, { body }, keepalive);
+    dirtyBody = false;
+    syncUnloadGuard();
     flash();
-  }, 650);
+  }, 350);
   const saveNotes = debounce(async (body: Paragraph[]) => {
-    scratchBody = body;
-    await saveScratch(body);
+    if (!ownedSessionId) return;
+    await saveScratch(ownedSessionId, body, keepalive);
+    dirtyNotes = false;
+    syncUnloadGuard();
     flash();
-  }, 700);
+  }, 400);
+  function bodyChanged(body: Paragraph[]) {
+    sessionBody = body;
+    dirtyBody = true;
+    syncUnloadGuard();
+    saved = t('common.saving');
+    saveBody(body);
+  }
+  function notesChanged(body: Paragraph[]) {
+    scratchBody = body;
+    dirtyNotes = true;
+    syncUnloadGuard();
+    saved = t('common.saving');
+    saveNotes(body);
+  }
   async function headerSave() {
-    await save({ title, worldDate });
+    if (!ownedSessionId) return;
+    await save(ownedSessionId, { title, worldDate });
     flash();
   }
   function flash() {
     saved = t('node.saved');
     setTimeout(() => (saved = ''), 1600);
   }
+  function flushPending(useKeepalive = false) {
+    keepalive = useKeepalive;
+    void saveBody.flush();
+    void saveNotes.flush();
+    keepalive = false;
+  }
+  function syncUnloadGuard() {
+    if (!mounted) return;
+    if (dirtyBody || dirtyNotes) window.addEventListener('beforeunload', flushForNavigation);
+    else window.removeEventListener('beforeunload', flushForNavigation);
+  }
+  function flushForNavigation() {
+    flushPending(true);
+  }
+  onDestroy(() => {
+    mounted = false;
+    window.removeEventListener('beforeunload', flushForNavigation);
+    flushPending();
+  });
+  onMount(() => {
+    mounted = true;
+    syncUnloadGuard();
+    window.addEventListener('pagehide', flushForNavigation);
+    return () => {
+      window.removeEventListener('beforeunload', flushForNavigation);
+      window.removeEventListener('pagehide', flushForNavigation);
+    };
+  });
   function buildPairs(ids: string[], linked: Set<string>) {
     const result: [string, string][] = [];
     for (let i = 0; i < ids.length; i++)
@@ -146,9 +205,11 @@
           {types}
           readonly={!canWrite}
           placeholder={t('session.editorPlaceholder')}
-          onChange={saveBody}
+          onChange={bodyChanged}
           {openNode}
           createNode={createMention}
+          {showContext}
+          {showNodeContext}
         />
         {#if canLink && pairs.length}<section class="suggestions">
             <header>
@@ -183,9 +244,11 @@
             {types}
             readonly={!canWrite}
             placeholder={t('session.privatePlaceholder')}
-            onChange={saveNotes}
+            onChange={notesChanged}
             {openNode}
             createNode={createMention}
+            {showContext}
+            {showNodeContext}
           />
         </section>
         {#if relatedPosts.length}<section class="related-notes">

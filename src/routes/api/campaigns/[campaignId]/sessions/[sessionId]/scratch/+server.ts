@@ -9,3 +9,5 @@ export const PUT: RequestHandler = async (event) => {
   await updateScratch(event.params.campaignId, event.params.sessionId, user.id, input.body);
   return ok({ ok: true });
 };
+
+export const POST = PUT;

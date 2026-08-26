@@ -197,8 +197,8 @@ graph:
   addNode: Node
   detailsFor: Details van {{title}}
   noSummary: Nog geen samenvatting.
-  hide: Verberg
-  reveal: Onthul
+  hide: Verbergen
+  reveal: Onthullen
   connect: Verbinden met een andere node
   showOnMap: Tonen op de kaart
   nodeAdded: Node toegevoegd.
@@ -341,15 +341,18 @@ editor:
   newNode: 'Nieuw: “{{title}}”'
   createNode: Nieuwe node maken
   noResults: Geen resultaten
+  linkSelection: Koppel aan {{title}}
+  createFromSelection: 'Maak node van “{{title}}”'
+  detach: Losmaken uit tekst
 atlas:
   fit: Kaart passend
   zoomIn: Inzoomen
   zoomOut: Uitzoomen
   upload: Kaart uploaden
   mapOf: Kaart van {{title}}
-  lockMarker: Marker vergrendelen
-  unlockMarker: Marker ontgrendelen
-  removeMarker: Van kaart verwijderen
+  lockMarker: Marker vastzetten
+  unlockMarker: Marker losmaken
+  removeMarker: Van de kaart halen
   empty: Upload een kaart om locaties te plaatsen.
   ariaLabel: Interactieve campagnekaart
   emptyHeading: Leg de wereld op tafel

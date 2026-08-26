@@ -82,6 +82,20 @@
     <path d="M4 7h16M4 12h16M4 17h16" />
   {:else if name === 'undo'}
     <path d="M9 7 4 12l5 5M5 12h8a6 6 0 0 1 6 6" />
+  {:else if name === 'open'}
+    <path
+      d="M14 4.5h5.5V10M19 5l-7.5 7.5M18.5 14v4.5A1.5 1.5 0 0 1 17 20H6a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 6 5.5h4.5"
+    />
+  {:else if name === 'cut'}
+    <circle cx="6" cy="6" r="2.5" /><circle cx="6" cy="18" r="2.5" /><path
+      d="m8.2 7.2 11.3 6.3M8.2 16.8 19.5 10.5M12 12l-3.8 2.2"
+    />
+  {:else if name === 'shuffle'}
+    <path
+      d="M4 7h3c5 0 5 10 10 10h3M17 4l3 3-3 3M4 17h3c1.7 0 2.8-1.1 3.8-2.6M14 7.6c.8-.4 1.8-.6 3.2-.6H20M17 14l3 3-3 3"
+    />
+  {:else if name === 'unpin'}
+    <path d="M5 4l15 15M15 4l5 5-2.4 1.6M13 16l-1 5-2-2 .6-3M4 20l5-5" />
   {:else if name === 'more'}
     <circle cx="5" cy="12" r="1" fill="currentColor" stroke="none" /><circle
       cx="12"

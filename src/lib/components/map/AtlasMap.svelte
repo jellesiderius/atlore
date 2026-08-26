@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from '$lib/components/ui/Icon.svelte';
+  import type { MenuItem } from '$lib/components/ui/ContextMenu.svelte';
   import { tooltip } from '$lib/actions/tooltip';
   import type { Campaign, MediaAsset, NodeType, WorldNode } from '$lib/types';
   import { t } from '$lib/i18n/index.svelte';
@@ -12,7 +13,8 @@
     canPin,
     uploadMain,
     pinNode,
-    openNode
+    openNode,
+    showNodeContext
   }: {
     campaign: Campaign;
     nodes: WorldNode[];
@@ -23,6 +25,7 @@
     uploadMain: (file: File) => Promise<void>;
     pinNode: (id: string, value: Record<string, unknown>) => Promise<void>;
     openNode: (id: string) => void;
+    showNodeContext: (id: string, x: number, y: number, items?: MenuItem[]) => void;
   } = $props();
   let mapKey = $state<string>('campaign');
   let zoom = $state(1);
@@ -32,7 +35,6 @@
   let moving = $state<string | null>(null);
   let stage = $state<HTMLDivElement>();
   let busy = $state(false);
-  let context = $state<{ node: WorldNode; x: number; y: number } | null>(null);
   let mapOwner = $derived(mapKey === 'campaign' ? null : nodes.find((node) => node.id === mapKey));
   let mediaId = $derived(mapKey === 'campaign' ? campaign.mapMediaId : mapOwner?.mapMediaId);
   let asset = $derived(media.find((item) => item.id === mediaId));
@@ -67,6 +69,7 @@
     zoom = Math.max(0.3, Math.min(5, zoom * Math.exp(-event.deltaY * 0.001)));
   }
   function down(event: PointerEvent) {
+    if (event.button !== 0) return;
     if ((event.target as HTMLElement).closest('.marker')) return;
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
     dragging = { x: event.clientX, y: event.clientY, panX, panY };
@@ -176,13 +179,34 @@
             title={node.title}
             onpointerdown={(event) => {
               event.stopPropagation();
+              if (event.button !== 0) return;
               if (canPin && !node.markerLocked) moving = node.id;
             }}
             ondblclick={() => openNode(node.id)}
             oncontextmenu={(event) => {
               event.preventDefault();
               event.stopPropagation();
-              context = { node, x: event.clientX, y: event.clientY };
+              moving = null;
+              showNodeContext(
+                node.id,
+                event.clientX,
+                event.clientY,
+                canPin
+                  ? [
+                      {
+                        label: node.markerLocked ? t('atlas.unlockMarker') : t('atlas.lockMarker'),
+                        icon: node.markerLocked ? 'unlock' : 'lock',
+                        run: () => pinNode(node.id, { markerLocked: !node.markerLocked })
+                      },
+                      {
+                        label: t('atlas.removeMarker'),
+                        icon: 'unpin',
+                        danger: true,
+                        run: () => pinNode(node.id, { pinX: null, pinY: null, pinMapId: null })
+                      }
+                    ]
+                  : []
+              );
             }}
             ><span><Icon name={node.markerLocked ? 'lock' : 'pin'} size={12} /></span><b
               >{node.title}</b
@@ -202,33 +226,6 @@
       </div>{/if}
   </div>
 </section>
-{#if context}<div
-    class="marker-menu"
-    style:left={`${Math.min(context.x, innerWidth - 220)}px`}
-    style:top={`${Math.min(context.y, innerHeight - 150)}px`}
-  >
-    <button
-      onclick={() => {
-        openNode(context!.node.id);
-        context = null;
-      }}><Icon name="session" size={14} />{t('atlas.openDossier')}</button
-    ><button
-      onclick={async () => {
-        await pinNode(context!.node.id, { markerLocked: !context!.node.markerLocked });
-        context = null;
-      }}
-      ><Icon name={context.node.markerLocked ? 'unlock' : 'lock'} size={14} />{context.node
-        .markerLocked
-        ? t('atlas.release')
-        : t('atlas.lock')}</button
-    ><button
-      class="danger"
-      onclick={async () => {
-        await pinNode(context!.node.id, { pinX: null, pinY: null, pinMapId: null });
-        context = null;
-      }}><Icon name="trash" size={14} />{t('atlas.remove')}</button
-    >
-  </div>{/if}
 
 <style>
   .atlas {
@@ -360,34 +357,6 @@
   }
   .upload-empty input {
     display: none;
-  }
-  .marker-menu {
-    position: fixed;
-    z-index: 110;
-    width: 210px;
-    padding: 5px;
-    border: 1px solid var(--line-2);
-    border-radius: 9px;
-    background: var(--bg-2);
-    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.5);
-  }
-  .marker-menu button {
-    width: 100%;
-    min-height: 34px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border: 0;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--text-2);
-    font-size: 12px;
-  }
-  .marker-menu button:hover {
-    background: var(--bg-3);
-  }
-  .marker-menu .danger {
-    color: var(--danger);
   }
   @media (max-width: 600px) {
     .atlas > header select {

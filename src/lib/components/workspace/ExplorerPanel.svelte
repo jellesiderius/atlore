@@ -161,7 +161,12 @@
       <div class="rows">
         {#each recent
           .map((id) => activeNodes.find((node) => node.id === id))
-          .filter(Boolean) as node}<button onclick={() => onNode(node!.id)}
+          .filter(Boolean) as node}<button
+            onclick={() => onNode(node!.id)}
+            oncontextmenu={(event) => {
+              event.preventDefault();
+              onContext(node!.id, event.clientX, event.clientY);
+            }}
             ><span style:background={typeMap.get(node!.type)?.colorDark}></span><b>{node!.title}</b
             ><small
               >{typeMap.get(node!.type)
@@ -178,7 +183,12 @@
         placeholder={t('explorer.searchPlaceholder')}
       />
       <div class="rows">
-        {#each searchResults as node}<button onclick={() => onNode(node.id)}
+        {#each searchResults as node}<button
+            onclick={() => onNode(node.id)}
+            oncontextmenu={(event) => {
+              event.preventDefault();
+              onContext(node.id, event.clientX, event.clientY);
+            }}
             ><span style:background={typeMap.get(node.type)?.colorDark}></span><b>{node.title}</b
             ><small
               >{typeMap.get(node.type)

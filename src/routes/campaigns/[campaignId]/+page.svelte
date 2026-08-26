@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { goto, replaceState } from '$app/navigation';
+  import { goto, pushState, replaceState } from '$app/navigation';
   import { onMount } from 'svelte';
   import CampaignSettingsModal from '$lib/components/campaign/CampaignSettingsModal.svelte';
   import GraphCanvas, { type ForceSettings } from '$lib/components/graph/GraphCanvas.svelte';
@@ -27,8 +27,10 @@
     MediaAsset,
     Paragraph,
     PanelName,
+    SessionEntry,
     VersionEntry,
     ViewName,
+    WorldNode,
     WorkspaceSnapshot
   } from '$lib/types';
   let { data }: { data: { snapshot: WorkspaceSnapshot } } = $props();
@@ -38,6 +40,7 @@
   let panel = $state<PanelName>('explorer');
   let panelOpen = $state(typeof window === 'undefined' ? true : innerWidth >= 860);
   let selected = $state<string | null>(null);
+  let popover = $state<string | null>(null);
   let popoverAnchor = $state({
     x: typeof window === 'undefined' ? 720 : innerWidth / 2,
     y: typeof window === 'undefined' ? 450 : innerHeight / 2
@@ -75,8 +78,9 @@
   });
   let toasts = $state<Toast[]>([]);
   let refreshing = false;
+  let refreshQueued = false;
   let nodeMap = $derived(new Map(snapshot.nodes.map((node) => [node.id, node])));
-  let selectedNode = $derived(selected ? nodeMap.get(selected) : undefined);
+  let popoverNode = $derived(popover ? nodeMap.get(popover) : undefined);
   let dossierNode = $derived(dossier ? nodeMap.get(dossier) : undefined);
   let currentSession = $derived(
     snapshot.sessions.find((session) => session.id === sessionId) ?? null
@@ -87,6 +91,7 @@
       : undefined
   );
   let typeMap = $derived(new Map(snapshot.nodeTypes.map((type) => [type.key, type])));
+  const workspaceViews = new Set<ViewName>(['graph', 'session', 'story', 'atlas']);
   onMount(() => {
     const stored = localStorage.getItem('atlore-theme');
     theme = stored === 'light' ? 'light' : 'dark';
@@ -98,33 +103,70 @@
       }
       if (event.key === 'Escape') {
         selected = null;
+        popover = null;
         context = null;
       }
     };
     window.addEventListener('keydown', key);
+    const restore = () => restoreWorkspaceUrl(new URL(location.href));
     let realtime: WebSocket | null = null;
     let realtimeTimer: ReturnType<typeof setTimeout>;
-    api<{ token: string; path: string }>(`/api/campaigns/${snapshot.campaign.id}/realtime`, {
-      method: 'POST'
-    })
-      .then(({ token, path }) => {
-        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        realtime = new WebSocket(
-          `${protocol}//${location.host}${path}?token=${encodeURIComponent(token)}`
-        );
-        realtime.onmessage = (event) => {
-          const message = JSON.parse(event.data);
-          if (message.type === 'invalidate') {
-            clearTimeout(realtimeTimer);
-            realtimeTimer = setTimeout(refresh, 180);
-          }
-        };
+    let realtimeConnecting = false;
+    let suspended = false;
+    let disposed = false;
+    const connectRealtime = () => {
+      suspended = false;
+      if (disposed || realtimeConnecting || realtime) return;
+      realtimeConnecting = true;
+      api<{ token: string; path: string }>(`/api/campaigns/${snapshot.campaign.id}/realtime`, {
+        method: 'POST'
       })
-      .catch(() => undefined);
-    return () => {
-      window.removeEventListener('keydown', key);
+        .then(({ token, path }) => {
+          if (disposed || suspended) return;
+          const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const socket = new WebSocket(
+            `${protocol}//${location.host}${path}?token=${encodeURIComponent(token)}`
+          );
+          realtime = socket;
+          socket.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            if (message.type === 'invalidate') {
+              clearTimeout(realtimeTimer);
+              realtimeTimer = setTimeout(refresh, 180);
+            }
+          };
+          socket.onclose = () => {
+            if (realtime === socket) realtime = null;
+          };
+        })
+        .catch(() => undefined)
+        .finally(() => (realtimeConnecting = false));
+    };
+    const suspendRealtime = () => {
+      suspended = true;
       clearTimeout(realtimeTimer);
       realtime?.close();
+      realtime = null;
+    };
+    const restoreFromCache = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        restore();
+        void refresh();
+        connectRealtime();
+      }
+    };
+    window.addEventListener('popstate', restore);
+    window.addEventListener('pageshow', restoreFromCache);
+    window.addEventListener('pagehide', suspendRealtime);
+    restore();
+    connectRealtime();
+    return () => {
+      disposed = true;
+      window.removeEventListener('keydown', key);
+      window.removeEventListener('popstate', restore);
+      window.removeEventListener('pageshow', restoreFromCache);
+      window.removeEventListener('pagehide', suspendRealtime);
+      suspendRealtime();
     };
   });
   function can(right: Parameters<typeof may>[2]) {
@@ -141,22 +183,65 @@
   function remember(id: string) {
     recent = [id, ...recent.filter((item) => item !== id)].slice(0, 20);
   }
+  function restoreWorkspaceUrl(url: URL) {
+    const requestedView = url.searchParams.get('view') as ViewName | null;
+    view = requestedView && workspaceViews.has(requestedView) ? requestedView : 'graph';
+    const requestedSession = url.searchParams.get('session');
+    if (requestedSession && snapshot.sessions.some((item) => item.id === requestedSession))
+      sessionId = requestedSession;
+    else if (!snapshot.sessions.some((item) => item.id === sessionId && !item.trashedAt))
+      sessionId = snapshot.sessions.find((item) => !item.trashedAt)?.id ?? '';
+    const requestedNode = url.searchParams.get('node');
+    dossier =
+      requestedNode && snapshot.nodes.some((item) => item.id === requestedNode && !item.trashedAt)
+        ? requestedNode
+        : null;
+    if (dossier) {
+      selected = dossier;
+      remember(dossier);
+    }
+    popover = null;
+    context = null;
+  }
+  function navigateWorkspace(
+    next: { view?: ViewName; sessionId?: string; dossier?: string | null },
+    replace = false
+  ) {
+    if (next.view) view = next.view;
+    if (next.sessionId !== undefined) sessionId = next.sessionId;
+    if (next.dossier !== undefined) dossier = next.dossier;
+    popover = null;
+    context = null;
+    const url = new URL(location.href);
+    if (view === 'graph') url.searchParams.delete('view');
+    else url.searchParams.set('view', view);
+    if (sessionId) url.searchParams.set('session', sessionId);
+    else url.searchParams.delete('session');
+    if (dossier) url.searchParams.set('node', dossier);
+    else url.searchParams.delete('node');
+    if (url.href === location.href) return;
+    if (replace) replaceState(url, {});
+    else pushState(url, {});
+  }
   function openNode(id: string) {
-    dossier = id;
     selected = id;
     remember(id);
     palette = false;
-    panelOpen = false;
+    if (innerWidth < 860) panelOpen = false;
+    navigateWorkspace({ dossier: id });
   }
-  function selectNode(id: string | null, clientX?: number, clientY?: number) {
+  function selectNode(id: string | null) {
     selected = id;
-    if (id) {
-      remember(id);
+    if (id) remember(id);
+  }
+  function graphSelect(id: string | null, clientX?: number, clientY?: number) {
+    selectNode(id);
+    popover = id;
+    if (id)
       popoverAnchor = {
         x: clientX ?? innerWidth / 2,
         y: clientY ?? innerHeight / 2
       };
-    }
   }
   function notify(text: string, action?: Toast['action']) {
     const id = createClientId();
@@ -164,11 +249,17 @@
     setTimeout(() => (toasts = toasts.filter((item) => item.id !== id)), 5000);
   }
   async function refresh() {
-    if (refreshing) return;
+    if (refreshing) {
+      refreshQueued = true;
+      return;
+    }
     refreshing = true;
     try {
-      const query = snapshot.viewAs ? `?viewAs=${encodeURIComponent(snapshot.viewAs.id)}` : '';
-      snapshot = await api(`/api/campaigns/${snapshot.campaign.id}/workspace${query}`);
+      do {
+        refreshQueued = false;
+        const query = snapshot.viewAs ? `?viewAs=${encodeURIComponent(snapshot.viewAs.id)}` : '';
+        snapshot = await api(`/api/campaigns/${snapshot.campaign.id}/workspace${query}`);
+      } while (refreshQueued);
     } finally {
       refreshing = false;
     }
@@ -188,11 +279,45 @@
     createState = { title, x: 0, y: 0, insert };
   }
   async function patchNode(id: string, value: Record<string, unknown>, reload = true) {
-    await api(`/api/campaigns/${snapshot.campaign.id}/nodes/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(value)
-    });
-    if (reload) await refresh();
+    const original = nodeMap.get(id);
+    if (original) {
+      const optimistic = { ...original, ...value } as WorldNode & { trashed?: boolean };
+      if (value.trashed !== undefined) {
+        optimistic.trashedAt = value.trashed ? new Date().toISOString() : null;
+        delete optimistic.trashed;
+      }
+      snapshot = {
+        ...snapshot,
+        nodes: snapshot.nodes.map((node) => (node.id === id ? optimistic : node))
+      };
+    }
+    try {
+      const updated = await api<Record<string, unknown>>(
+        `/api/campaigns/${snapshot.campaign.id}/nodes/${id}`,
+        { method: 'PATCH', body: JSON.stringify(value) }
+      );
+      const current = nodeMap.get(id);
+      if (current) {
+        const { typeKey, ...fields } = updated;
+        const confirmed = {
+          ...current,
+          ...fields,
+          type: typeof typeKey === 'string' ? typeKey : current.type
+        } as WorldNode;
+        snapshot = {
+          ...snapshot,
+          nodes: snapshot.nodes.map((node) => (node.id === id ? confirmed : node))
+        };
+      }
+      if (reload) await refresh();
+    } catch (error) {
+      if (original)
+        snapshot = {
+          ...snapshot,
+          nodes: snapshot.nodes.map((node) => (node.id === id ? original : node))
+        };
+      throw error;
+    }
   }
   async function connect(a: string, b: string) {
     const link = await api<{ id: string }>(`/api/campaigns/${snapshot.campaign.id}/links`, {
@@ -212,73 +337,111 @@
     await refresh();
     notify(t('workspace.linkRemoved'));
   }
-  function nodeContext(id: string | null, x: number, y: number) {
-    const node = id ? nodeMap.get(id) : null;
+  function showContext(x: number, y: number, items: MenuItem[]) {
+    const available = items.filter(Boolean);
+    if (!available.length) return;
+    popover = null;
     context = {
       x,
       y,
-      items: node
+      items: [
+        ...available.filter((item) => !item.danger),
+        ...available.filter((item) => item.danger)
+      ]
+    };
+  }
+  function nodeMenuItems(node: WorldNode): MenuItem[] {
+    return [
+      { label: t('common.open'), icon: 'open', run: () => openNode(node.id) },
+      ...(can('link')
         ? [
-            { label: t('common.open'), icon: 'session', run: () => openNode(node.id) },
-            ...(can('link')
-              ? [
-                  {
-                    label: t('workspace.context.connect'),
-                    icon: 'link',
-                    run: () => (connectId = node.id)
-                  }
-                ]
-              : []),
+            {
+              label: t('workspace.context.connect'),
+              icon: 'link',
+              run: () => (connectId = node.id)
+            }
+          ]
+        : []),
+      ...(view !== 'graph'
+        ? [
             {
               label: t('workspace.context.showGraph'),
               icon: 'graph',
               run: () => {
-                view = 'graph';
                 selected = node.id;
+                navigateWorkspace({ view: 'graph', dossier: null });
+                setTimeout(() => graph?.centerOn(node.id));
               }
-            },
+            }
+          ]
+        : []),
+      ...(node.pinX !== null && node.pinY !== null
+        ? [
             {
               label: t('graph.showOnMap'),
               icon: 'atlas',
               run: () => {
-                view = 'atlas';
                 selected = node.id;
+                navigateWorkspace({ view: 'atlas', dossier: null });
               }
-            },
-            ...(can('reveal')
-              ? [
-                  {
-                    label: node.revealed ? t('graph.hide') : t('graph.reveal'),
-                    icon: node.revealed ? 'eye-off' : 'eye',
-                    run: () => patchNode(node.id, { revealed: !node.revealed })
-                  }
-                ]
-              : []),
-            ...(can('delete')
-              ? [
-                  {
-                    label: t('workspace.context.trash'),
-                    icon: 'trash',
-                    danger: true,
-                    run: () => patchNode(node.id, { trashed: true })
-                  }
-                ]
-              : [])
+            }
           ]
-        : [
-            ...(can('create')
-              ? [
-                  {
-                    label: t('workspace.context.newHere'),
-                    icon: 'plus',
-                    run: () => (createState = { title: '', x: 0, y: 0 })
-                  }
-                ]
-              : []),
-            { label: t('graph.fit'), icon: 'fit', run: () => graph?.fitView() },
-            { label: t('graph.reflow'), icon: 'undo', run: () => graph?.reflow() }
+        : []),
+      ...(can('reveal')
+        ? [
+            {
+              label: node.revealed ? t('graph.hide') : t('graph.reveal'),
+              icon: node.revealed ? 'eye-off' : 'eye',
+              run: () => patchNode(node.id, { revealed: !node.revealed })
+            }
           ]
-    };
+        : []),
+      ...(can('delete')
+        ? [
+            {
+              label: t('workspace.context.trash'),
+              icon: 'trash',
+              danger: true,
+              run: async () => {
+                if (dossier === node.id) navigateWorkspace({ dossier: null }, true);
+                if (selected === node.id) selected = null;
+                if (popover === node.id) popover = null;
+                await patchNode(node.id, { trashed: true });
+              }
+            }
+          ]
+        : [])
+    ];
+  }
+  function showNodeContext(id: string, x: number, y: number, extras: MenuItem[] = []) {
+    const node = nodeMap.get(id);
+    if (node && !node.trashedAt) showContext(x, y, [...nodeMenuItems(node), ...extras]);
+  }
+  function graphContext(
+    id: string | null,
+    clientX: number,
+    clientY: number,
+    worldX: number,
+    worldY: number
+  ) {
+    if (id) {
+      selected = id;
+      showNodeContext(id, clientX, clientY);
+      return;
+    }
+    showContext(clientX, clientY, [
+      ...(can('create')
+        ? [
+            {
+              label: t('workspace.context.newHere'),
+              icon: 'plus',
+              run: () => (createState = { title: '', x: worldX, y: worldY })
+            }
+          ]
+        : []),
+      { label: t('graph.fit'), icon: 'fit', run: () => graph?.fitView() },
+      { label: t('graph.reflow'), icon: 'shuffle', run: () => graph?.reflow() }
+    ]);
   }
   async function upload(file: File, purpose: 'image' | 'map') {
     const form = new FormData();
@@ -310,8 +473,7 @@
     newSessionTitle = '';
     newSessionDate = '';
     await refresh();
-    sessionId = result.id;
-    view = 'session';
+    navigateWorkspace({ view: 'session', sessionId: result.id, dossier: null });
   }
   async function saveCampaign(value: Record<string, unknown>) {
     await api(`/api/campaigns/${snapshot.campaign.id}`, {
@@ -345,11 +507,13 @@
     const query = userId ? `?viewAs=${encodeURIComponent(userId)}` : '';
     snapshot = await api(`/api/campaigns/${snapshot.campaign.id}/workspace${query}`);
     selected = null;
+    popover = null;
     dossier = null;
     context = null;
     const url = new URL(location.href);
     if (userId) url.searchParams.set('viewAs', userId);
     else url.searchParams.delete('viewAs');
+    url.searchParams.delete('node');
     replaceState(url, {});
     notify(
       userId
@@ -386,8 +550,7 @@
     <NavigationRail
       {view}
       pick={(next) => {
-        view = next;
-        dossier = null;
+        navigateWorkspace({ view: next, dossier: null });
       }}
     /><ExplorerPanel
       open={panelOpen}
@@ -404,10 +567,11 @@
       canPurge={snapshot.campaign.role === 'gm'}
       onPanel={(next) => (panel = next)}
       onNode={(id) => {
-        selectNode(id);
+        if (view === 'graph') graphSelect(id);
+        else selectNode(id);
         if (innerWidth < 860) panelOpen = false;
       }}
-      onContext={nodeContext}
+      onContext={showNodeContext}
       onNew={() => (createState = { title: '', x: 0, y: 0 })}
       onRestore={(id) => patchNode(id, { trashed: false })}
       onPurge={async (id) => {
@@ -442,12 +606,12 @@
           types={snapshot.nodeTypes}
           {selected}
           settings={forceSettings}
-          onSelect={selectNode}
+          onSelect={graphSelect}
           onOpen={openNode}
           onCreate={(x, y) => {
             if (can('create')) createState = { title: '', x, y };
           }}
-          onContext={nodeContext}
+          onContext={graphContext}
           onMove={(id, x, y) => {
             if (can('edit')) patchNode(id, { x, y }, false);
           }}
@@ -456,16 +620,18 @@
           reflow={() => graph?.reflow()}
           newNode={() => (createState = { title: '', x: 0, y: 0 })}
           canCreate={can('create')}
-        />{#if selectedNode}<NodePopover
-            node={selectedNode}
-            type={typeMap.get(selectedNode.type)}
+        />{#if popoverNode}<NodePopover
+            node={popoverNode}
+            type={typeMap.get(popoverNode.type)}
             media={snapshot.media}
             anchor={popoverAnchor}
-            open={() => openNode(selectedNode.id)}
-            connect={() => (connectId = selectedNode.id)}
-            showAtlas={() => (view = 'atlas')}
-            toggleReveal={() => patchNode(selectedNode.id, { revealed: !selectedNode.revealed })}
-            close={() => (selected = null)}
+            open={() => openNode(popoverNode.id)}
+            connect={() => (connectId = popoverNode.id)}
+            showAtlas={() => {
+              navigateWorkspace({ view: 'atlas', dossier: null });
+            }}
+            toggleReveal={() => patchNode(popoverNode.id, { revealed: !popoverNode.revealed })}
+            close={() => (popover = null)}
             canLink={can('link')}
             canReveal={can('reveal')}
           />{/if}
@@ -485,20 +651,53 @@
             canLink={can('link')}
             {openNode}
             createMention={mentionCreate}
-            pick={(id) => (sessionId = id)}
-            save={async (value) => {
-              if (currentSession)
-                await api(`/api/campaigns/${snapshot.campaign.id}/sessions/${currentSession.id}`, {
-                  method: 'PATCH',
-                  body: JSON.stringify(value)
-                });
+            pick={(id) => navigateWorkspace({ view: 'session', sessionId: id, dossier: null })}
+            save={async (sessionId, value, keepalive = false) => {
+              const url = `/api/campaigns/${snapshot.campaign.id}/sessions/${sessionId}`;
+              if (
+                keepalive &&
+                navigator.sendBeacon(
+                  url,
+                  new Blob([JSON.stringify(value)], { type: 'application/json' })
+                )
+              )
+                return;
+              const updated = await api<SessionEntry>(url, {
+                method: 'PATCH',
+                body: JSON.stringify(value),
+                keepalive
+              });
+              snapshot = {
+                ...snapshot,
+                sessions: snapshot.sessions.map((item) => (item.id === updated.id ? updated : item))
+              };
             }}
-            saveScratch={async (body) => {
-              if (currentSession)
-                await api(
-                  `/api/campaigns/${snapshot.campaign.id}/sessions/${currentSession.id}/scratch`,
-                  { method: 'PUT', body: JSON.stringify({ body }) }
-                );
+            saveScratch={async (sessionId, body, keepalive = false) => {
+              const url = `/api/campaigns/${snapshot.campaign.id}/sessions/${sessionId}/scratch`;
+              const payload = { body };
+              if (
+                keepalive &&
+                navigator.sendBeacon(
+                  url,
+                  new Blob([JSON.stringify(payload)], { type: 'application/json' })
+                )
+              )
+                return;
+              await api(url, {
+                method: 'PUT',
+                body: JSON.stringify(payload),
+                keepalive
+              });
+              snapshot = {
+                ...snapshot,
+                scratch: [
+                  ...snapshot.scratch.filter(
+                    (item) =>
+                      item.sessionId !== sessionId || item.userId !== snapshot.currentUser.id
+                  ),
+                  { sessionId, userId: snapshot.currentUser.id, body }
+                ]
+              };
             }}
             createSession={() => (sessionCreate = true)}
             trash={async () => {
@@ -508,7 +707,14 @@
                   body: JSON.stringify({ trashed: true })
                 });
                 await refresh();
-                sessionId = snapshot.sessions.find((item) => !item.trashedAt)?.id ?? '';
+                navigateWorkspace(
+                  {
+                    view: 'session',
+                    sessionId: snapshot.sessions.find((item) => !item.trashedAt)?.id ?? '',
+                    dossier: null
+                  },
+                  true
+                );
               }
             }}
             history={() => {
@@ -521,6 +727,8 @@
                 };
             }}
             {connect}
+            {showContext}
+            {showNodeContext}
           />{/key}
       {:else if view === 'story'}<StoryView
           sessions={snapshot.sessions}
@@ -530,8 +738,7 @@
           currentUserName={snapshot.currentUser.name}
           {openNode}
           openSession={(id) => {
-            sessionId = id;
-            view = 'session';
+            navigateWorkspace({ view: 'session', sessionId: id, dossier: null });
           }}
         />
       {:else}<AtlasMap
@@ -544,6 +751,7 @@
           {uploadMain}
           pinNode={patchNode}
           {openNode}
+          {showNodeContext}
         />{/if}
       {#if dossierNode}{#key dossierNode.id}<NodeDossier
             node={dossierNode}
@@ -560,12 +768,10 @@
             canReveal={can('reveal')}
             canLink={can('link')}
             canHistory={can('history')}
-            close={() => (dossier = null)}
+            close={() => navigateWorkspace({ dossier: null })}
             {openNode}
             openSession={(id) => {
-              sessionId = id;
-              view = 'session';
-              dossier = null;
+              navigateWorkspace({ view: 'session', sessionId: id, dossier: null });
             }}
             saveNode={(value) => patchNode(dossierNode.id, value)}
             saveDescription={async (body, shared) => {
@@ -592,6 +798,8 @@
                 body: dossierNode.descriptions.find((item) => item.own)?.body ?? []
               })}
             createMention={mentionCreate}
+            {showContext}
+            {showNodeContext}
           />{/key}{/if}
     </section>
   </div>

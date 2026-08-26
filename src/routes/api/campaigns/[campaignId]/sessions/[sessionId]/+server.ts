@@ -9,6 +9,8 @@ export const PATCH: RequestHandler = async (event) => {
   return ok(await updateSession(event.params.campaignId, event.params.sessionId, user, input));
 };
 
+export const POST = PATCH;
+
 export const DELETE: RequestHandler = async (event) => {
   const user = requireUser(event);
   await purgeSession(event.params.campaignId, event.params.sessionId, user.id);

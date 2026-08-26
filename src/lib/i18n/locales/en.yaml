@@ -341,6 +341,9 @@ editor:
   newNode: 'New: “{{title}}”'
   createNode: Create new node
   noResults: No results
+  linkSelection: Link to {{title}}
+  createFromSelection: 'Create node from “{{title}}”'
+  detach: Detach from text
 atlas:
   fit: Fit map
   zoomIn: Zoom in

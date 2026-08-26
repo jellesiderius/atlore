@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { searchNodes, fold } from '$lib/domain/search';
   import { findNodeTitleMatches, normalizeBody } from '$lib/domain/text';
+  import type { MenuItem } from '$lib/components/ui/ContextMenu.svelte';
   import type { NodeType, Paragraph, WorldNode } from '$lib/types';
   import { nodeTypeLabel, t } from '$lib/i18n/index.svelte';
 
@@ -14,7 +15,9 @@
     ariaLabel = '',
     onChange,
     openNode,
-    createNode
+    createNode,
+    showContext,
+    showNodeContext
   }: {
     body: Paragraph[];
     nodes: WorldNode[];
@@ -25,6 +28,8 @@
     onChange?: (body: Paragraph[]) => void;
     openNode?: (id: string) => void;
     createNode?: (title: string, insert: (id: string) => void) => void;
+    showContext?: (x: number, y: number, items: MenuItem[]) => void;
+    showNodeContext?: (id: string, x: number, y: number, items?: MenuItem[]) => void;
   } = $props();
 
   let editor: HTMLDivElement;
@@ -206,6 +211,79 @@
     }
   }
 
+  function contextmenu(event: MouseEvent) {
+    if (!readonly && showContext) {
+      const selection = selectionInfo();
+      if (selection) {
+        event.preventDefault();
+        event.stopPropagation();
+        const existing = nodes.find(
+          (node) =>
+            !node.trashedAt && node.type !== 'session' && fold(node.title) === fold(selection.text)
+        );
+        const item: MenuItem = existing
+          ? {
+              label: t('editor.linkSelection', { title: existing.title }),
+              icon: 'link',
+              run: () => replaceSelection(selection.range, existing.id)
+            }
+          : {
+              label: t('editor.createFromSelection', { title: selection.text }),
+              icon: 'plus',
+              run: () => createNode?.(selection.text, (id) => replaceSelection(selection.range, id))
+            };
+        showContext(event.clientX, event.clientY, [item]);
+        return;
+      }
+    }
+
+    const target =
+      event.target instanceof Element ? event.target.closest<HTMLElement>('[data-ref]') : null;
+    const id = target?.dataset.ref;
+    if (!id || !nodes.some((node) => node.id === id && !node.trashedAt) || !showNodeContext) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    const extras: MenuItem[] = readonly
+      ? []
+      : [
+          {
+            label: t('editor.detach'),
+            icon: 'cut',
+            run: () => {
+              if (!target.isConnected) return;
+              target.replaceWith(document.createTextNode(target.textContent ?? ''));
+              changed();
+            }
+          }
+        ];
+    showNodeContext(id, event.clientX, event.clientY, extras);
+  }
+
+  function selectionInfo(): { text: string; range: Range } | null {
+    const selection = document.getSelection();
+    if (!selection?.rangeCount || selection.isCollapsed) return null;
+    const range = selection.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) return null;
+    const text = selection.toString().trim();
+    if (!text || text.length > 60) return null;
+    return { text, range: range.cloneRange() };
+  }
+
+  function replaceSelection(range: Range, id: string) {
+    if (!range.startContainer.isConnected) return;
+    range.deleteContents();
+    const element = chip(id);
+    range.insertNode(element);
+    range.setStartAfter(element);
+    range.collapse(true);
+    const selection = document.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    editor.focus();
+    changed();
+  }
+
   function markSuggestions() {
     if (!editor || readonly || menu || nodes.length > 3_000) return;
     const candidates = nodes
@@ -328,6 +406,7 @@
     oninput={changed}
     onkeydown={keydown}
     onclick={clicked}
+    oncontextmenu={contextmenu}
   ></div>
 </div>
 {#if menu}

@@ -23,10 +23,39 @@ export async function api<T>(url: string, init: RequestInit = {}): Promise<T> {
   return payload as T;
 }
 
-export function debounce<T extends (...args: never[]) => unknown>(fn: T, delay = 500) {
-  let timeout: ReturnType<typeof setTimeout>;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => fn(...args), delay);
+export type Debounced<T extends (...args: never[]) => unknown> = ((
+  ...args: Parameters<T>
+) => void) & {
+  flush: () => ReturnType<T> | undefined;
+  cancel: () => void;
+};
+
+export function debounce<T extends (...args: never[]) => unknown>(
+  fn: T,
+  delay = 500
+): Debounced<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  let pending: Parameters<T> | undefined;
+  const run = () => {
+    if (!pending) return undefined;
+    const args = pending;
+    pending = undefined;
+    timeout = undefined;
+    return fn(...args) as ReturnType<T>;
   };
+  const debounced = (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    pending = args;
+    timeout = setTimeout(run, delay);
+  };
+  debounced.flush = () => {
+    clearTimeout(timeout);
+    return run();
+  };
+  debounced.cancel = () => {
+    clearTimeout(timeout);
+    timeout = undefined;
+    pending = undefined;
+  };
+  return debounced;
 }
