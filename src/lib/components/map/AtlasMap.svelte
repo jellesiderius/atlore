@@ -1,6 +1,7 @@
 <script lang="ts">
   import Icon from '$lib/components/ui/Icon.svelte';
   import type { MenuItem } from '$lib/components/ui/ContextMenu.svelte';
+  import { IMAGE_ACCEPT, imageDropzone } from '$lib/actions/imageDrop';
   import { tooltip } from '$lib/actions/tooltip';
   import type { Campaign, MediaAsset, NodeType, WorldNode } from '$lib/types';
   import { t } from '$lib/i18n/index.svelte';
@@ -57,10 +58,7 @@
     )
   );
   let typeMap = $derived(new Map(types.map((type) => [type.key, type])));
-  async function picked(event: Event) {
-    const input = event.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
+  async function uploadMapFile(file: File) {
     busy = true;
     uploadError = '';
     try {
@@ -69,8 +67,13 @@
       uploadError = error instanceof Error ? error.message : t('errors.uploadFailed');
     } finally {
       busy = false;
-      input.value = '';
     }
+  }
+  function picked(event: Event) {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (file) void uploadMapFile(file);
   }
   function wheel(event: WheelEvent) {
     event.preventDefault();
@@ -78,7 +81,12 @@
   }
   function down(event: PointerEvent) {
     if (event.button !== 0) return;
-    if ((event.target as HTMLElement).closest('.marker')) return;
+    if (
+      (event.target as HTMLElement).closest(
+        '.marker, button, input, label, select, a, [role="button"]'
+      )
+    )
+      return;
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
     dragging = { x: event.clientX, y: event.clientY, panX, panY };
   }
@@ -151,7 +159,7 @@
         use:tooltip={t('atlas.upload')}
         ><Icon name="upload" size={16} /><input
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          accept={IMAGE_ACCEPT}
           disabled={busy}
           onchange={picked}
         /></label
@@ -179,6 +187,12 @@
     onpointercancel={up}
     ondragover={(event) => event.preventDefault()}
     ondrop={drop}
+    data-image-drop-label={t('atlas.dropMap')}
+    use:imageDropzone={{
+      enabled: canUpload && !busy,
+      onFile: uploadMapFile,
+      onInvalid: () => (uploadError = t('server.unsupportedImage'))
+    }}
   >
     {#if asset}<div
         bind:this={stage}
@@ -243,7 +257,7 @@
         {#if canUpload}<label class="primary-button upload-control" class:disabled={busy}
             >{busy ? t('common.upload') : t('atlas.upload')}<input
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
+              accept={IMAGE_ACCEPT}
               disabled={busy}
               onchange={picked}
             /></label
@@ -317,6 +331,20 @@
     justify-content: center;
     touch-action: none;
     background: radial-gradient(circle at 50% 50%, var(--bg-2), var(--canvas) 68%);
+  }
+  :global(.viewport[data-image-dragging='true'])::after {
+    content: attr(data-image-drop-label);
+    position: absolute;
+    z-index: 40;
+    inset: 18px;
+    display: grid;
+    place-items: center;
+    border: 2px dashed var(--ember);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--canvas) 88%, transparent);
+    color: var(--text);
+    font: 20px var(--font-serif);
+    pointer-events: none;
   }
   .stage {
     position: relative;

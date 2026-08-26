@@ -1,9 +1,35 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
+
+const PNG =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+
+async function dropPng(page: Page, target: Locator, name: string) {
+  const transfer = await page.evaluateHandle(
+    (value) => {
+      const bytes = Uint8Array.from(atob(value.png), (character) => character.charCodeAt(0));
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([bytes], value.name, { type: 'image/png' }));
+      return transfer;
+    },
+    { png: PNG, name }
+  );
+  expect(
+    await page.evaluate(
+      (value) => ({ types: Array.from(value.types), count: value.files.length }),
+      transfer
+    )
+  ).toEqual({ types: ['Files'], count: 1 });
+  await target.dispatchEvent('dragenter', { dataTransfer: transfer });
+  await expect(target).toHaveAttribute('data-image-dragging', 'true');
+  await target.dispatchEvent('dragover', { dataTransfer: transfer });
+  await target.dispatchEvent('drop', { dataTransfer: transfer });
+  await transfer.dispose();
+}
 
 test('node-mentions verversen de graph direct en de kaartknop uploadt echt', async ({
   page
 }, testInfo) => {
-  test.setTimeout(45_000);
+  test.setTimeout(90_000);
   test.skip(
     testInfo.project.name.includes('mobile'),
     'De canvasverversing wordt op desktop getest.'
@@ -52,6 +78,17 @@ test('node-mentions verversen de graph direct en de kaartknop uploadt echt', asy
 
   try {
     await page.goto(`/campaigns/${world.campaignId}?node=${world.sourceId}`);
+    const dossier = page.locator('.dossier');
+    await dropPng(page, dossier.locator('.hero'), 'bronburcht.png');
+    await expect(dossier.getByRole('img', { name: 'Bronburcht' })).toBeVisible({ timeout: 5_000 });
+
+    await page.goto(`/campaigns/${world.campaignId}?node=${world.sourceId}&nodeTab=map`);
+    await dropPng(page, dossier.locator('.map-upload'), 'bronburcht-kaart.png');
+    await expect(dossier.getByRole('img', { name: 'Kaart van Bronburcht' })).toBeVisible({
+      timeout: 5_000
+    });
+    await page.goto(`/campaigns/${world.campaignId}?node=${world.sourceId}`);
+
     const editor = page.locator('.dossier').getByRole('textbox', { name: 'Teksteditor' }).first();
     await editor.fill('@Doelwoud');
     await page.getByRole('listbox').getByText('Doelwoud', { exact: true }).click();
@@ -71,17 +108,17 @@ test('node-mentions verversen de graph direct en de kaartknop uploadt echt', asy
       )
     ).toBe(true);
 
-    await page.getByRole('button', { name: 'Kaart', exact: true }).click();
+    await page.goto(`/campaigns/${world.campaignId}?view=atlas`);
     const uploadInput = page.getByRole('button', { name: 'Kaart uploaden', exact: true });
     await expect(uploadInput).toBeEnabled();
-    await uploadInput.setInputFiles({
-      name: 'atlore-testkaart.png',
-      mimeType: 'image/png',
-      buffer: Buffer.from(
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
-        'base64'
-      )
-    });
+    const [chooser] = await Promise.all([page.waitForEvent('filechooser'), uploadInput.click()]);
+    await chooser.setFiles([]);
+
+    await dropPng(
+      page,
+      page.getByRole('application', { name: 'Interactieve campagnekaart' }),
+      'atlore-testkaart.png'
+    );
     await expect(page.getByRole('img', { name: `Kaart van ${world.title}` })).toBeVisible({
       timeout: 5_000
     });

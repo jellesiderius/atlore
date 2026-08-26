@@ -2,6 +2,7 @@
   import { onDestroy } from 'svelte';
   import Icon from '$lib/components/ui/Icon.svelte';
   import type { MenuItem } from '$lib/components/ui/ContextMenu.svelte';
+  import { IMAGE_ACCEPT, imageDropzone } from '$lib/actions/imageDrop';
   import { tooltip } from '$lib/actions/tooltip';
   import RichTextEditor from '$lib/components/richtext/RichTextEditor.svelte';
   import RichTextView from '$lib/components/richtext/RichTextView.svelte';
@@ -118,6 +119,7 @@
   let relationQuery = $state('');
   let busy = $state(false);
   let saved = $state('');
+  let uploadError = $state('');
   let currentUser = $derived(members.find((member) => member.id === currentUserId));
   let related = $derived(
     links
@@ -199,16 +201,23 @@
       busy = false;
     }
   }
-  async function imagePicked(event: Event, purpose: 'image' | 'map') {
-    const file = (event.currentTarget as HTMLInputElement).files?.[0];
-    if (!file) return;
+  async function uploadImage(file: File, purpose: 'image' | 'map') {
     busy = true;
+    uploadError = '';
     try {
       const asset = await upload(file, purpose);
       await saveNode(purpose === 'image' ? { imageMediaId: asset.id } : { mapMediaId: asset.id });
+    } catch (error) {
+      uploadError = error instanceof Error ? error.message : t('errors.uploadFailed');
     } finally {
       busy = false;
     }
+  }
+  function imagePicked(event: Event, purpose: 'image' | 'map') {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (file) void uploadImage(file, purpose);
   }
   function toggleWith(id: string) {
     visibleWith = visibleWith.includes(id)
@@ -256,12 +265,24 @@
       >{/each}
   </nav>
   <div class="content">
+    {#if uploadError}<p class="upload-error" role="alert">{uploadError}</p>{/if}
     {#if tab === 'overview'}
-      <div class="hero">
-        {#if image}<img src={image.url} alt={node.title} />{:else if canImage}<label class="upload"
-            ><Icon name="upload" /><span>{t('node.addImage')}</span><input
+      <div
+        class="hero"
+        data-image-drop-label={t('node.dropImage')}
+        use:imageDropzone={{
+          enabled: canImage && !busy,
+          onFile: (file) => uploadImage(file, 'image'),
+          onInvalid: () => (uploadError = t('server.unsupportedImage'))
+        }}
+      >
+        {#if image}<img src={image.url} alt={node.title} />{/if}
+        {#if canImage}<label class:upload={!image} class:replace-image={image}
+            ><Icon name="upload" /><span>{image ? t('node.replaceImage') : t('node.addImage')}</span
+            ><input
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
+              accept={IMAGE_ACCEPT}
+              disabled={busy}
               onchange={(event) => imagePicked(event, 'image')}
             /></label
           >{/if}
@@ -372,15 +393,39 @@
         />
       </section>
     {:else if tab === 'map'}
-      {#if mapImage}<div class="node-map">
+      {#if mapImage}<div
+          class="node-map"
+          data-image-drop-label={t('node.dropMap')}
+          use:imageDropzone={{
+            enabled: canImage && !busy,
+            onFile: (file) => uploadImage(file, 'map'),
+            onInvalid: () => (uploadError = t('server.unsupportedImage'))
+          }}
+        >
           <img src={mapImage.url} alt={t('atlas.mapOf', { title: node.title })} />
+          {#if canImage}<label class="replace-map"
+              ><Icon name="upload" size={14} /><span>{t('node.replaceMap')}</span><input
+                type="file"
+                accept={IMAGE_ACCEPT}
+                disabled={busy}
+                onchange={(event) => imagePicked(event, 'map')}
+              /></label
+            >{/if}
           <p>{t('node.mapAvailable')}</p>
-        </div>{:else if canImage}<label class="map-upload"
+        </div>{:else if canImage}<label
+          class="map-upload"
+          data-image-drop-label={t('node.dropMap')}
+          use:imageDropzone={{
+            enabled: !busy,
+            onFile: (file) => uploadImage(file, 'map'),
+            onInvalid: () => (uploadError = t('server.unsupportedImage'))
+          }}
           ><Icon name="atlas" size={35} /><b class="serif-title"
             >{t('node.mapFor', { title: node.title })}</b
           ><span>{t('node.mapUploadHint')}</span><input
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
+            accept={IMAGE_ACCEPT}
+            disabled={busy}
             onchange={(event) => imagePicked(event, 'map')}
           /></label
         >{/if}
@@ -550,6 +595,7 @@
     padding: 22px max(20px, calc((100% - 760px) / 2)) 90px;
   }
   .hero {
+    position: relative;
     height: 180px;
     margin-bottom: 16px;
     border: 1px solid var(--line);
@@ -573,8 +619,41 @@
     cursor: pointer;
   }
   .upload input,
-  .map-upload input {
+  .map-upload input,
+  .replace-image input,
+  .replace-map input {
     display: none;
+  }
+  .replace-image {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 6px;
+    padding: 12px;
+    cursor: pointer;
+  }
+  .replace-image > :global(svg),
+  .replace-image > span,
+  .replace-map {
+    border: 1px solid color-mix(in srgb, white 18%, transparent);
+    background: rgba(26, 24, 22, 0.82);
+    color: #eae8e6;
+    backdrop-filter: blur(8px);
+  }
+  .replace-image > :global(svg) {
+    box-sizing: content-box;
+    padding: 7px;
+    border-radius: 8px 0 0 8px;
+    border-right: 0;
+  }
+  .replace-image > span {
+    margin-left: -6px;
+    padding: 7px 9px 7px 3px;
+    border-radius: 0 8px 8px 0;
+    border-left: 0;
+    font-size: 11px;
   }
   .header-fields {
     display: grid;
@@ -675,6 +754,7 @@
     min-height: 100px;
   }
   .map-upload {
+    position: relative;
     height: 330px;
     display: flex;
     flex-direction: column;
@@ -697,8 +777,49 @@
     border: 1px solid var(--line);
     border-radius: 12px;
   }
+  .node-map {
+    position: relative;
+  }
+  .replace-map {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 0 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    cursor: pointer;
+  }
   .node-map p {
     color: var(--text-3);
+    font-size: 12px;
+  }
+  :global(.hero[data-image-dragging='true'])::after,
+  :global(.node-map[data-image-dragging='true'])::after,
+  :global(.map-upload[data-image-dragging='true'])::after {
+    content: attr(data-image-drop-label);
+    position: absolute;
+    z-index: 5;
+    inset: 8px;
+    display: grid;
+    place-items: center;
+    border: 2px dashed var(--ember);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--canvas) 88%, transparent);
+    color: var(--text);
+    font: 18px var(--font-serif);
+    pointer-events: none;
+  }
+  .upload-error {
+    margin: 0 0 12px;
+    padding: 8px 10px;
+    border: 1px solid color-mix(in srgb, var(--danger, #d96868) 55%, var(--line));
+    border-radius: 8px;
+    background: var(--bg-2);
+    color: var(--danger, #d96868);
     font-size: 12px;
   }
   .stats {

@@ -257,6 +257,10 @@ node:
   saved: Saved
   mentionHint: Type @ to create a link
   addImage: Add image
+  replaceImage: Replace image
+  replaceMap: Replace map
+  dropImage: Drop to upload the image
+  dropMap: Drop to upload the map
   everyone: Everyone
   selected: Selected players
   onlyMe: Only me
@@ -380,6 +384,7 @@ atlas:
   zoomIn: Zoom in
   zoomOut: Zoom out
   upload: Upload map
+  dropMap: Drop to upload the map
   mapOf: Map of {{title}}
   lockMarker: Lock marker
   unlockMarker: Unlock marker

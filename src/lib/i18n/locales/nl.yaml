@@ -257,6 +257,10 @@ node:
   saved: Opgeslagen
   mentionHint: Typ @ om te koppelen
   addImage: Afbeelding toevoegen
+  replaceImage: Afbeelding vervangen
+  replaceMap: Kaart vervangen
+  dropImage: Laat los om de afbeelding te uploaden
+  dropMap: Laat los om de kaart te uploaden
   everyone: Iedereen
   selected: Gekozen
   onlyMe: Alleen ik
@@ -380,6 +384,7 @@ atlas:
   zoomIn: Inzoomen
   zoomOut: Uitzoomen
   upload: Kaart uploaden
+  dropMap: Laat los om de kaart te uploaden
   mapOf: Kaart van {{title}}
   lockMarker: Marker vastzetten
   unlockMarker: Marker losmaken
