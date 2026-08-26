@@ -1,0 +1,1 @@
+ALTER TABLE "campaigns" ADD COLUMN "force_settings" jsonb DEFAULT '{"repel":700,"distance":70,"grouping":0.65,"gravity":0.3}'::jsonb NOT NULL;

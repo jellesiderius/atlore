@@ -64,10 +64,4 @@ export const NODE_COLOR_SWATCHES = [
   '#d978a8'
 ];
 
-export const CHARACTER_FIELDS: Record<string, string[]> = {
-  character: ['ac', 'hp', 'speed', 'initiative', 'str', 'dex', 'con', 'int', 'wis', 'cha'],
-  npc: ['ac', 'hp', 'speed', 'initiative', 'str', 'dex', 'con', 'int', 'wis', 'cha'],
-  monster: ['ac', 'hp', 'speed', 'initiative', 'str', 'dex', 'con', 'int', 'wis', 'cha']
-};
-
 export const PLACE_TYPES = new Set(['location', 'building', 'region']);

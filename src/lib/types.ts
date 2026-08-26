@@ -4,7 +4,7 @@ export type Visibility = 'all' | 'sel' | 'me';
 export type Role = 'gm' | 'player';
 export type ViewName = 'graph' | 'session' | 'story' | 'atlas';
 export type PanelName = 'explorer' | 'recent' | 'search' | 'settings';
-export type NodeDossierTab = 'overview' | 'map' | 'game' | 'relations' | 'story';
+export type NodeDossierTab = 'overview' | 'map' | 'relations' | 'story';
 export type CampaignSettingsTab = 'general' | 'members' | 'rights';
 export type PostKind = 'note' | 'theory' | 'goal';
 export type PostVisibility = 'all' | 'me' | 'gm' | 'sel';
@@ -53,6 +53,13 @@ export interface Rights {
   settings: boolean;
 }
 
+export interface ForceSettings {
+  repel: number;
+  distance: number;
+  grouping: number;
+  gravity: number;
+}
+
 export type RightKey = keyof Rights;
 
 export interface CampaignSummary {
@@ -74,6 +81,7 @@ export interface Campaign extends Omit<
 > {
   rights: Rights;
   mapMediaId: Id | null;
+  forceSettings: ForceSettings;
 }
 
 export interface NodeType {

@@ -12,6 +12,19 @@ test('campagne-, node-, link- en sessie-API vormen één werkende flow', async (
   expect(campaignResponse.status()).toBe(201);
   const { id: campaignId } = await campaignResponse.json();
 
+  const forceSettings = { repel: 1250, distance: 96, grouping: 0.8, gravity: 0.42 };
+  const settingsUpdate = await request.patch(`/api/campaigns/${campaignId}`, {
+    data: { forceSettings }
+  });
+  expect(settingsUpdate.ok()).toBeTruthy();
+  expect(
+    (
+      await request.patch(`/api/campaigns/${campaignId}`, {
+        data: { forceSettings: { ...forceSettings, repel: 99999 } }
+      })
+    ).status()
+  ).toBe(422);
+
   const first = await request.post(`/api/campaigns/${campaignId}/nodes`, {
     data: { title: 'Testheld', type: 'character', summary: 'Uit de E2E-test' }
   });
@@ -50,6 +63,7 @@ test('campagne-, node-, link- en sessie-API vormen één werkende flow', async (
   expect(snapshot.nodes).toHaveLength(2);
   expect(snapshot.links).toHaveLength(1);
   expect(snapshot.sessions).toHaveLength(1);
+  expect(snapshot.campaign.forceSettings).toEqual(forceSettings);
 
   const customType = await request.post(`/api/campaigns/${campaignId}/types`, {
     data: {

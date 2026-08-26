@@ -237,15 +237,12 @@ node:
   create: Create node
   creating: Creating node…
   overview: Overview
-  game: Game
   relations: Relations
   story: Story
   notes: Notes
   description: Description
   image: Image
   map: Map
-  stats: Attributes
-  gear: Gear
   history: History
   dossierClose: Close dossier
   uploadImage: Upload image
@@ -279,11 +276,6 @@ node:
   mapAvailable: This map is also available in the map view.
   mapFor: A map for {{title}}
   mapUploadHint: Upload an image and place nodes on it as markers.
-  statistics: Statistics
-  addRow: row
-  item: Item
-  note: Note
-  saveGame: Save game data
   linked: Connected · {{count}}
   unlink: Disconnect
   connectSearch: Search to connect…
@@ -310,6 +302,10 @@ explorer:
   closePanel: Close panel
   empty: No nodes yet.
   forces: Forces
+  forceSaving: Saving…
+  forceSaved: Saved
+  forceError: Save failed
+  forceSaveFailed: The force settings could not be saved.
   repel: Repulsion
   distance: Distance
   grouping: Grouping

@@ -2,7 +2,7 @@
   import { goto, pushState, replaceState } from '$app/navigation';
   import { onMount } from 'svelte';
   import CampaignSettingsModal from '$lib/components/campaign/CampaignSettingsModal.svelte';
-  import GraphCanvas, { type ForceSettings } from '$lib/components/graph/GraphCanvas.svelte';
+  import GraphCanvas from '$lib/components/graph/GraphCanvas.svelte';
   import GraphToolbar from '$lib/components/graph/GraphToolbar.svelte';
   import NodePopover from '$lib/components/graph/NodePopover.svelte';
   import NodePreview from '$lib/components/graph/NodePreview.svelte';
@@ -20,7 +20,7 @@
   import WorkspaceHeader from '$lib/components/workspace/WorkspaceHeader.svelte';
   import Modal from '$lib/components/ui/Modal.svelte';
   import ToastStack, { type Toast } from '$lib/components/ui/ToastStack.svelte';
-  import { api } from '$lib/client/api';
+  import { api, debounce } from '$lib/client/api';
   import { createClientId } from '$lib/client/id';
   import { may } from '$lib/domain/permissions';
   import { normalizeBody } from '$lib/domain/text';
@@ -28,6 +28,7 @@
   import type {
     MediaAsset,
     CampaignSettingsTab,
+    ForceSettings,
     NodeDossierTab,
     Paragraph,
     PanelName,
@@ -80,12 +81,12 @@
   } | null>(null);
   let theme = $state<'dark' | 'light'>('dark');
   let graph = $state<GraphCanvas>();
-  let forceSettings = $state<ForceSettings>({
-    repel: 700,
-    distance: 70,
-    grouping: 0.65,
-    gravity: 0.3
-  });
+  // svelte-ignore state_referenced_locally -- server data seeds the persisted campaign setting
+  let forceSettings = $state<ForceSettings>({ ...snapshot.campaign.forceSettings });
+  let forceStatus = $state<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  let forceSettingsDirty = false;
+  let forceSettingsRevision = 0;
+  let forceStatusTimer: ReturnType<typeof setTimeout> | undefined;
   let toasts = $state<Toast[]>([]);
   let realtimeStatus = $state<'connecting' | 'connected' | 'offline'>('connecting');
   let realtimeDrafts = $state<
@@ -137,8 +138,45 @@
   let typeMap = $derived(new Map(snapshot.nodeTypes.map((type) => [type.key, type])));
   const workspaceViews = new Set<ViewName>(['graph', 'session', 'story', 'atlas']);
   const workspacePanels = new Set<PanelName>(['explorer', 'recent', 'search', 'settings']);
-  const dossierTabs = new Set<NodeDossierTab>(['overview', 'map', 'game', 'relations', 'story']);
+  const dossierTabs = new Set<NodeDossierTab>(['overview', 'map', 'relations', 'story']);
   const campaignSettingsTabs = new Set<CampaignSettingsTab>(['general', 'members', 'rights']);
+  const persistForceSettings = debounce(
+    async (request: { settings: ForceSettings; revision: number }) => {
+      try {
+        await api(`/api/campaigns/${snapshot.campaign.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ forceSettings: request.settings }),
+          keepalive: true
+        });
+        snapshot = {
+          ...snapshot,
+          campaign: {
+            ...snapshot.campaign,
+            forceSettings: { ...request.settings }
+          }
+        };
+        if (request.revision !== forceSettingsRevision) return;
+        forceSettingsDirty = false;
+        forceStatus = 'saved';
+        clearTimeout(forceStatusTimer);
+        forceStatusTimer = setTimeout(() => (forceStatus = 'idle'), 1800);
+      } catch (error) {
+        if (request.revision !== forceSettingsRevision) return;
+        forceSettingsDirty = false;
+        forceSettings = { ...snapshot.campaign.forceSettings };
+        forceStatus = 'error';
+        notify(error instanceof Error ? error.message : t('explorer.forceSaveFailed'));
+      }
+    },
+    350
+  );
+  function changeForceSettings(settings: ForceSettings) {
+    forceSettings = { ...settings };
+    forceSettingsDirty = true;
+    forceStatus = 'saving';
+    forceSettingsRevision += 1;
+    persistForceSettings({ settings: { ...settings }, revision: forceSettingsRevision });
+  }
   onMount(() => {
     const stored = localStorage.getItem('atlore-theme');
     theme = stored === 'light' ? 'light' : 'dark';
@@ -216,6 +254,10 @@
       realtime = null;
       realtimeStatus = 'offline';
     };
+    const leavePage = () => {
+      void persistForceSettings.flush();
+      suspendRealtime();
+    };
     const restoreFromCache = (event: PageTransitionEvent) => {
       if (event.persisted) {
         restore();
@@ -225,7 +267,7 @@
     };
     window.addEventListener('popstate', restore);
     window.addEventListener('pageshow', restoreFromCache);
-    window.addEventListener('pagehide', suspendRealtime);
+    window.addEventListener('pagehide', leavePage);
     restore();
     connectRealtime();
     return () => {
@@ -233,15 +275,17 @@
       window.removeEventListener('keydown', key);
       window.removeEventListener('popstate', restore);
       window.removeEventListener('pageshow', restoreFromCache);
-      window.removeEventListener('pagehide', suspendRealtime);
+      window.removeEventListener('pagehide', leavePage);
       clearTimeout(previewShowTimer);
       clearTimeout(previewHideTimer);
+      clearTimeout(forceStatusTimer);
       clearTimeout(realtimeDraftThrottle);
       clearTimeout(realtimeCursorThrottle);
       clearTimeout(realtimeNodeDraftThrottle);
       clearTimeout(realtimeNodeCursorThrottle);
       for (const timer of realtimeCursorExpiry.values()) clearTimeout(timer);
       realtimeCursorExpiry.clear();
+      void persistForceSettings.flush();
       suspendRealtime();
     };
   });
@@ -692,7 +736,9 @@
         const incoming = await api<WorkspaceSnapshot>(
           `/api/campaigns/${snapshot.campaign.id}/workspace${query}`
         );
-        snapshot = mergeRealtimeDrafts(incoming);
+        const merged = mergeRealtimeDrafts(incoming);
+        snapshot = merged;
+        if (!forceSettingsDirty) forceSettings = { ...merged.campaign.forceSettings };
       } while (refreshQueued);
     } finally {
       refreshing = false;
@@ -992,6 +1038,7 @@
       {recent}
       {selected}
       settings={forceSettings}
+      {forceStatus}
       {theme}
       members={snapshot.members}
       viewAs={snapshot.viewAs}
@@ -1022,7 +1069,8 @@
       }}
       onAddType={addNodeType}
       onRemoveType={removeNodeType}
-      onForceSettings={(value) => (forceSettings = value)}
+      onForceSettings={changeForceSettings}
+      onForceSettingsCommit={() => void persistForceSettings.flush()}
       onCampaignSettings={() => navigateWorkspace({ campaignSettings: 'general' })}
       onReflow={() => graph?.reflow()}
       onTheme={toggleTheme}

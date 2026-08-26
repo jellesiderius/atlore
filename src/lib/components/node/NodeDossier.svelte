@@ -7,7 +7,7 @@
   import RichTextEditor from '$lib/components/richtext/RichTextEditor.svelte';
   import RichTextView from '$lib/components/richtext/RichTextView.svelte';
   import { debounce } from '$lib/client/api';
-  import { CHARACTER_FIELDS, PLACE_TYPES } from '$lib/domain/constants';
+  import { PLACE_TYPES } from '$lib/domain/constants';
   import { normalizeBody, referencedNodeIds } from '$lib/domain/text';
   import { searchNodes } from '$lib/domain/search';
   import type {
@@ -112,10 +112,6 @@
   let revealed = $state(node.revealed);
   // svelte-ignore state_referenced_locally -- the keyed dossier owns its edit buffer
   let visibleWith = $state([...node.visibleWith]);
-  // svelte-ignore state_referenced_locally -- the keyed dossier owns its edit buffer
-  let stats = $state({ ...node.stats });
-  // svelte-ignore state_referenced_locally -- the keyed dossier owns its edit buffer
-  let gear = $state(node.gear.map((item) => ({ ...item })));
   let relationQuery = $state('');
   let busy = $state(false);
   let saved = $state('');
@@ -224,10 +220,6 @@
       ? visibleWith.filter((item) => item !== id)
       : [...visibleWith, id];
   }
-  async function saveGame() {
-    await saveNode({ stats, gear });
-    saved = t('node.saved');
-  }
 </script>
 
 <section class="dossier" aria-busy={busy}>
@@ -259,7 +251,7 @@
       >{/if}
   </header>
   <nav>
-    {#each [['overview', 'node.overview'], ...(PLACE_TYPES.has(node.type) ? [['map', 'node.map']] : []), ['game', 'node.game'], ['relations', 'node.relations'], ['story', 'node.story']] as item}<button
+    {#each [['overview', 'node.overview'], ...(PLACE_TYPES.has(node.type) ? [['map', 'node.map']] : []), ['relations', 'node.relations'], ['story', 'node.story']] as item}<button
         class:active={tab === item[0]}
         onclick={() => onTab(item[0] as NodeDossierTab)}>{t(item[1])}</button
       >{/each}
@@ -428,40 +420,6 @@
             disabled={busy}
             onchange={(event) => imagePicked(event, 'map')}
           /></label
-        >{/if}
-    {:else if tab === 'game'}
-      <div class="eyebrow">{t('node.statistics')}</div>
-      <div class="stats">
-        {#each CHARACTER_FIELDS[node.type] ?? ['ac', 'hp', 'speed', 'initiative'] as key}<label
-            >{key.toUpperCase()}<input
-              class="field"
-              value={stats[key] ?? ''}
-              disabled={!canEdit}
-              oninput={(event) => (stats[key] = event.currentTarget.value)}
-            /></label
-          >{/each}
-      </div>
-      <div class="gear-head">
-        <div class="eyebrow">{t('node.gear')}</div>
-        {#if canEdit}<button onclick={() => (gear = [...gear, { name: '', note: '' }])}
-            >+ {t('node.addRow')}</button
-          >{/if}
-      </div>
-      <div class="gear">
-        {#each gear as item, index}<input
-            class="field"
-            bind:value={item.name}
-            placeholder={t('node.item')}
-            disabled={!canEdit}
-          /><input
-            class="field"
-            bind:value={item.note}
-            placeholder={t('node.note')}
-            disabled={!canEdit}
-          /><button onclick={() => (gear = gear.filter((_, i) => i !== index))}>×</button>{/each}
-      </div>
-      {#if canEdit}<button class="primary-button save-game" onclick={saveGame}
-          >{t('node.saveGame')}</button
         >{/if}
     {:else if tab === 'relations'}
       <div class="eyebrow">{t('node.linked', { count: related.length })}</div>
@@ -822,45 +780,6 @@
     color: var(--danger, #d96868);
     font-size: 12px;
   }
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 7px;
-    margin: 9px 0 25px;
-  }
-  .stats label {
-    font: 9px var(--font-mono);
-    color: var(--text-3);
-  }
-  .stats .field {
-    display: block;
-    min-height: 36px;
-    margin-top: 4px;
-  }
-  .gear-head {
-    display: flex;
-    justify-content: space-between;
-  }
-  .gear-head button {
-    border: 0;
-    background: transparent;
-    color: var(--ember);
-    font-size: 12px;
-  }
-  .gear {
-    display: grid;
-    grid-template-columns: 1fr 1.4fr 30px;
-    gap: 5px;
-    margin-top: 8px;
-  }
-  .gear button {
-    border: 0;
-    background: transparent;
-    color: var(--text-3);
-  }
-  .save-game {
-    margin-top: 12px;
-  }
   .relations {
     display: grid;
     grid-template-columns: 1fr 30px;
@@ -986,19 +905,6 @@
     }
     .header-fields {
       grid-template-columns: 1fr;
-    }
-    .stats {
-      grid-template-columns: repeat(2, 1fr);
-    }
-    .gear {
-      grid-template-columns: 1fr 30px;
-    }
-    .gear input:nth-child(3n + 2) {
-      grid-column: 1;
-    }
-    .gear button {
-      grid-column: 2;
-      grid-row: auto;
     }
     .description-head {
       align-items: flex-start;

@@ -237,15 +237,12 @@ node:
   create: Node maken
   creating: Node maken…
   overview: Overzicht
-  game: Spel
   relations: Relaties
   story: Verhaal
   notes: Notities
   description: Beschrijving
   image: Afbeelding
   map: Kaart
-  stats: Eigenschappen
-  gear: Uitrusting
   history: Geschiedenis
   dossierClose: Dossier sluiten
   uploadImage: Afbeelding uploaden
@@ -279,11 +276,6 @@ node:
   mapAvailable: Deze kaart is ook beschikbaar in de kaartweergave.
   mapFor: Een kaart voor {{title}}
   mapUploadHint: Upload een afbeelding en plaats er nodes als markers op.
-  statistics: Statistieken
-  addRow: regel
-  item: Voorwerp
-  note: Notitie
-  saveGame: Spelgegevens opslaan
   linked: Gekoppeld · {{count}}
   unlink: Loskoppelen
   connectSearch: Zoek om te verbinden…
@@ -310,6 +302,10 @@ explorer:
   closePanel: Paneel sluiten
   empty: Nog geen nodes.
   forces: Krachten
+  forceSaving: Opslaan…
+  forceSaved: Opgeslagen
+  forceError: Opslaan mislukt
+  forceSaveFailed: De krachtinstellingen konden niet worden opgeslagen.
   repel: Afstoting
   distance: Afstand
   grouping: Groepering

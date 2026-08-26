@@ -27,6 +27,7 @@ import type {
   Campaign,
   CampaignMember,
   CampaignSummary,
+  ForceSettings,
   NodePost,
   RightKey,
   SessionEntry,
@@ -156,6 +157,7 @@ export async function updateCampaign(
     system: string;
     note: string;
     rights: Record<string, boolean>;
+    forceSettings: ForceSettings;
     mapMediaId: string | null;
   }>
 ): Promise<void> {
@@ -359,6 +361,7 @@ export async function getWorkspace(
     note: campaignRow.note,
     role,
     rights: campaignRow.rights,
+    forceSettings: campaignRow.forceSettings,
     mapMediaId: campaignRow.mapMediaId,
     members: memberRows.map(({ id, name, color, role: memberRole }) => ({
       id,

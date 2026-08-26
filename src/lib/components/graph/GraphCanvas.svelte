@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { NodeType, WorldLink, WorldNode } from '$lib/types';
+  import type { ForceSettings, NodeType, WorldLink, WorldNode } from '$lib/types';
   import { t } from '$lib/i18n/index.svelte';
   import {
     connectedDepths,
@@ -8,10 +8,8 @@
     propagateDragDelta,
     stepForceSimulation,
     stepSpringSimulation,
-    type SimulationNode,
-    type SimulationSettings
+    type SimulationNode
   } from '$lib/graph/simulation';
-  export type ForceSettings = SimulationSettings;
   let {
     nodes,
     links,
@@ -400,10 +398,10 @@
     let spacing = 46 * camera.z;
     while (spacing < 26) spacing *= 2;
     while (spacing > 104) spacing /= 2;
-    const fade =
+    const adaptiveFade =
       Math.min(1, Math.max(0, (spacing - 26) / 16)) *
       Math.min(1, Math.max(0, (104 - spacing) / 20 + 0.35));
-    if (fade <= 0.02) return;
+    const fade = Math.max(0.7, adaptiveFade);
     const ox = camera.x % spacing,
       oy = camera.y % spacing;
     context.fillStyle = theme === 'light' ? '#000000' : '#ffffff';

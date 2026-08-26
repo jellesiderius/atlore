@@ -4,8 +4,14 @@
   import NodeTypeManager from '$lib/components/workspace/NodeTypeManager.svelte';
   import TrashManager from '$lib/components/workspace/TrashManager.svelte';
   import { searchNodes } from '$lib/domain/search';
-  import type { ForceSettings } from '$lib/components/graph/GraphCanvas.svelte';
-  import type { CampaignMember, NodeType, PanelName, SessionEntry, WorldNode } from '$lib/types';
+  import type {
+    CampaignMember,
+    ForceSettings,
+    NodeType,
+    PanelName,
+    SessionEntry,
+    WorldNode
+  } from '$lib/types';
   import { nodeTypeLabel, t } from '$lib/i18n/index.svelte';
   let {
     open,
@@ -16,6 +22,7 @@
     recent,
     selected,
     settings,
+    forceStatus,
     theme,
     members,
     viewAs,
@@ -34,6 +41,7 @@
     onAddType,
     onRemoveType,
     onForceSettings,
+    onForceSettingsCommit,
     onCampaignSettings,
     onReflow,
     onTheme,
@@ -48,6 +56,7 @@
     recent: string[];
     selected: string | null;
     settings: ForceSettings;
+    forceStatus: 'idle' | 'saving' | 'saved' | 'error';
     theme: 'dark' | 'light';
     members: CampaignMember[];
     viewAs: CampaignMember | null;
@@ -72,6 +81,7 @@
     }) => Promise<void>;
     onRemoveType: (key: string) => Promise<void>;
     onForceSettings: (settings: ForceSettings) => void;
+    onForceSettingsCommit: () => void;
     onCampaignSettings: () => void;
     onReflow: () => void;
     onTheme: () => void;
@@ -222,16 +232,24 @@
         restoreSession={onRestoreSession}
         purgeSession={onPurgeSession}
       />
-      <div class="eyebrow section-label">{t('explorer.forces')}</div>
+      <div class="eyebrow section-label force-heading">
+        <span>{t('explorer.forces')}</span>
+        {#if forceStatus !== 'idle'}<small class:error={forceStatus === 'error'} role="status"
+            >{t(`explorer.force${forceStatus[0].toUpperCase()}${forceStatus.slice(1)}`)}</small
+          >{/if}
+      </div>
       {#each forceControls as item}<label class="slider"
           ><span>{t(item.label)}<b>{settings[item.key].toFixed(item.digits)}</b></span><input
             type="range"
+            aria-label={t(item.label)}
             min={item.min}
             max={item.max}
             step={item.step}
             value={settings[item.key]}
+            disabled={!canManage}
             oninput={(event) =>
               onForceSettings({ ...settings, [item.key]: Number(event.currentTarget.value) })}
+            onchange={onForceSettingsCommit}
           /></label
         >{/each}<button class="ghost-button reflow" onclick={onReflow}
         >{t('explorer.reflow')}</button
@@ -440,6 +458,20 @@
   }
   .section-label {
     margin: 3px 4px 9px;
+  }
+  .force-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .force-heading small {
+    color: var(--text-2);
+    font: 9px var(--font-mono);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .force-heading small.error {
+    color: var(--danger, #d96868);
   }
   .slider {
     display: block;

@@ -174,6 +174,23 @@ test('paneel-, dossier- en campagne-instellingentabs herstellen via URL en brows
     await waitForWorkspace(page);
     await page.getByRole('button', { name: 'Instellingen', exact: true }).click();
     await expect(page).toHaveURL(/panel=settings/);
+    const repel = page.getByRole('slider', { name: 'Afstoting' });
+    await expect(repel).toHaveValue('700');
+    const savedSettings = page.waitForResponse(
+      (response) =>
+        response.url().endsWith(`/api/campaigns/${workspace.campaignId}`) &&
+        response.request().method() === 'PATCH' &&
+        response.ok()
+    );
+    await repel.evaluate((element) => {
+      (element as HTMLInputElement).value = '1250';
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+      element.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await savedSettings;
+    await expect(page.getByRole('status')).toHaveText('Opgeslagen');
+    await page.reload();
+    await expect(page.getByRole('slider', { name: 'Afstoting' })).toHaveValue('1250');
     await page.getByRole('button', { name: 'Campagne-instellingen', exact: true }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await expect(page).toHaveURL(/campaignSettings=general/);
@@ -198,9 +215,10 @@ test('paneel-, dossier- en campagne-instellingentabs herstellen via URL en brows
       .getByRole('button', { name: 'Navigatieheld', exact: true });
     await node.click({ button: 'right' });
     await page.getByRole('menuitem', { name: 'Openen' }).click();
-    await page.getByRole('button', { name: 'Spel', exact: true }).click();
-    await expect(page).toHaveURL(/nodeTab=game/);
-    await expect(page.getByText('Statistieken', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Spel', exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Relaties', exact: true }).click();
+    await expect(page).toHaveURL(/nodeTab=relations/);
+    await expect(page.getByText(/Gekoppeld/)).toBeVisible();
 
     await page.goBack();
     await expect(page).not.toHaveURL(/nodeTab=/);

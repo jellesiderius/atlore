@@ -13,7 +13,7 @@ import {
   uniqueIndex,
   uuid
 } from 'drizzle-orm/pg-core';
-import type { GearItem, Paragraph, Rights } from '$lib/types';
+import type { ForceSettings, GearItem, Paragraph, Rights } from '$lib/types';
 
 export const campaignRole = pgEnum('campaign_role', ['gm', 'player']);
 export const nodeSize = pgEnum('node_size', ['s', 'm', 'l']);
@@ -78,6 +78,10 @@ export const campaigns = pgTable('campaigns', {
   system: text('system').notNull(),
   note: text('note').notNull().default(''),
   rights: jsonb('rights').$type<Rights>().notNull(),
+  forceSettings: jsonb('force_settings')
+    .$type<ForceSettings>()
+    .notNull()
+    .default({ repel: 700, distance: 70, grouping: 0.65, gravity: 0.3 }),
   mapMediaId: uuid('map_media_id'),
   createdBy: uuid('created_by')
     .notNull()

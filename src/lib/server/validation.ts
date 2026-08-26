@@ -44,11 +44,21 @@ export const campaignCreateSchema = z.object({
   note: z.string().trim().max(300).default('')
 });
 
+export const forceSettingsSchema = z
+  .object({
+    repel: z.number().min(400).max(4200),
+    distance: z.number().min(40).max(240),
+    grouping: z.number().min(0).max(1.4),
+    gravity: z.number().min(0).max(1)
+  })
+  .strict();
+
 export const campaignUpdateSchema = z.object({
   title: z.string().trim().min(2).max(120).optional(),
   system: z.string().trim().min(2).max(80).optional(),
   note: z.string().trim().max(300).optional(),
   rights: z.record(z.string(), z.boolean()).optional(),
+  forceSettings: forceSettingsSchema.optional(),
   mapMediaId: z.uuid().nullable().optional()
 });
 

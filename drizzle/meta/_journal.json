@@ -15,6 +15,13 @@
       "when": 1787748883900,
       "tag": "0001_sleepy_thanos",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787756792838,
+      "tag": "0002_lethal_hitman",
+      "breakpoints": true
     }
   ]
 }
