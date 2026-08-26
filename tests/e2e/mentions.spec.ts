@@ -1,0 +1,68 @@
+import { expect, test } from '@playwright/test';
+
+test('een @ toont nodes en biedt daaronder een nieuwe node aan', async ({ page }) => {
+  await page.goto('/auth/login');
+  await page.getByPlaceholder('E-mailadres').fill('demo@atlore.app');
+  await page.getByPlaceholder('Wachtwoord').fill('AtloreDemo!2026');
+  await page.getByRole('button', { name: 'Inloggen' }).click();
+  await expect(page).toHaveURL(/\/campaigns$/);
+
+  const campaignId = await page.evaluate(async () => {
+    const response = await fetch('/api/campaigns', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        title: `Mentiontest ${Date.now()}`,
+        system: 'D&D 5e',
+        note: 'Tijdelijke Playwright-campagne'
+      })
+    });
+    if (!response.ok) throw new Error(await response.text());
+    const campaign = await response.json();
+    const nodeResponse = await fetch(`/api/campaigns/${campaign.id}/nodes`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Bestaande testnode',
+        type: 'npc',
+        size: 'm',
+        summary: '',
+        revealed: true,
+        visibility: 'all',
+        visibleWith: [],
+        x: 0,
+        y: 0,
+        connectTo: []
+      })
+    });
+    if (!nodeResponse.ok) throw new Error(await nodeResponse.text());
+    const sessionResponse = await fetch(`/api/campaigns/${campaign.id}/sessions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: 'Mentiontest', worldDate: '' })
+    });
+    if (!sessionResponse.ok) throw new Error(await sessionResponse.text());
+    return campaign.id as string;
+  });
+
+  try {
+    await page.goto(`/campaigns/${campaignId}`);
+    await page.getByRole('button', { name: 'Sessie', exact: true }).click();
+    const editor = page.getByRole('textbox', { name: 'Teksteditor' }).first();
+    await editor.click();
+    await editor.pressSequentially('@');
+
+    const menu = page.getByRole('listbox');
+    await expect(menu).toBeVisible();
+    await expect(menu.getByText('Bestaande testnode', { exact: true })).toBeVisible();
+
+    await editor.pressSequentially('Volledig nieuwe node');
+    await expect(menu.getByText('Nieuw Volledig nieuwe node', { exact: true })).toBeVisible();
+    await menu.getByText('Nieuw Volledig nieuwe node', { exact: true }).click();
+    await expect(page.getByPlaceholder('Naam')).toHaveValue('Volledig nieuwe node');
+  } finally {
+    await page.evaluate(async (id) => {
+      await fetch(`/api/campaigns/${id}`, { method: 'DELETE' });
+    }, campaignId);
+  }
+});

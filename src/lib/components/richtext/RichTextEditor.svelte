@@ -33,10 +33,12 @@
   let suggestionTimer: ReturnType<typeof setTimeout>;
   let lastExternal = '';
   let typeMap = $derived(new Map(types.map((type) => [type.key, type])));
-  let results = $derived(menu ? searchNodes(nodes, menu.query, { limit: 8 }) : []);
-  let canCreate = $derived(
-    !!menu?.query.trim() && !nodes.some((node) => fold(node.title) === fold(menu!.query))
-  );
+  let results = $derived.by(() => {
+    if (!menu) return [];
+    if (menu.query.trim()) return searchNodes(nodes, menu.query, { limit: 8 });
+    return nodes.filter((node) => !node.trashedAt && node.type !== 'session').slice(0, 8);
+  });
+  let canCreate = $derived(!!createNode && !!menu?.query.trim());
 
   onMount(() => {
     render(normalizeBody(body));
