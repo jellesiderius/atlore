@@ -65,7 +65,7 @@ test('schrijf- en leesvlakken hebben een herkenbare componentstatus', async ({ p
   await expect(page.getByLabel('Leesweergave').first()).toBeVisible();
 });
 
-test('tooltips en node-hoverinspectie volgen het prototype', async ({ page }, testInfo) => {
+test('tooltips en tekst-hoverinspectie volgen het prototype', async ({ page }, testInfo) => {
   test.skip(
     testInfo.project.name.includes('mobile'),
     'Hoverlagen zijn alleen actief met een muis.'
@@ -84,9 +84,19 @@ test('tooltips en node-hoverinspectie volgen het prototype', async ({ page }, te
 
   await page.mouse.move(700, 500);
   const nodeRow = page.locator('.group-items button').first();
-  const nodeTitle = (await nodeRow.innerText()).trim().replace('✦', '').trim();
   await nodeRow.hover();
   const preview = page.locator('.node-preview');
+  await page.waitForTimeout(350);
+  await expect(preview).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Sessie', exact: true }).click();
+  const nodeReference = page
+    .getByRole('textbox', { name: 'Teksteditor' })
+    .first()
+    .locator('[data-ref]')
+    .first();
+  const nodeTitle = (await nodeReference.innerText()).trim();
+  await nodeReference.hover();
   await expect(preview).toBeVisible();
   await expect(preview).toContainText(nodeTitle);
   expect(Math.round((await preview.boundingBox())!.width)).toBe(316);
@@ -95,7 +105,7 @@ test('tooltips en node-hoverinspectie volgen het prototype', async ({ page }, te
   await expect(preview).toBeVisible();
   await preview.getByRole('button', { name: 'Openen', exact: true }).click();
   await expect(page.getByLabel('Nodenaam')).toHaveValue(nodeTitle);
-  await expect(page.getByLabel('Schrijfvlak')).toBeVisible();
+  await expect(page.getByLabel('Schrijfvlak').first()).toBeVisible();
 });
 
 test('graphlijnen zijn gebogen en Explorer-klikken volgen het prototype', async ({

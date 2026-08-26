@@ -650,7 +650,6 @@
       canPurge={snapshot.campaign.role === 'gm'}
       onPanel={(next) => navigateWorkspace({ panel: next })}
       onNode={explorerSelect}
-      onPreview={previewNode}
       onContext={showNodeContext}
       onNew={() => (createState = { title: '', x: 0, y: 0 })}
       onRestore={(id) => patchNode(id, { trashed: false })}

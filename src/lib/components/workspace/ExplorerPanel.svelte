@@ -25,7 +25,6 @@
     canPurge,
     onPanel,
     onNode,
-    onPreview,
     onContext,
     onNew,
     onRestore,
@@ -58,7 +57,6 @@
     canPurge: boolean;
     onPanel: (panel: PanelName) => void;
     onNode: (id: string) => void;
-    onPreview: (id: string | null, x?: number, y?: number, delay?: number) => void;
     onContext: (id: string, x: number, y: number) => void;
     onNew: () => void;
     onRestore: (id: string) => void;
@@ -155,11 +153,6 @@
                     class:active={selected === node.id}
                     draggable="true"
                     ondragstart={(event) => drag(event, node.id)}
-                    onpointerenter={(event) => {
-                      const rect = event.currentTarget.getBoundingClientRect();
-                      onPreview(node.id, rect.right + 8, rect.top - 4, 160);
-                    }}
-                    onpointerleave={() => onPreview(null)}
                     onclick={() => onNode(node.id)}
                     oncontextmenu={(event) => {
                       event.preventDefault();
@@ -177,11 +170,6 @@
         {#each recent
           .map((id) => activeNodes.find((node) => node.id === id))
           .filter(Boolean) as node}<button
-            onpointerenter={(event) => {
-              const rect = event.currentTarget.getBoundingClientRect();
-              onPreview(node!.id, rect.right + 8, rect.top - 4, 160);
-            }}
-            onpointerleave={() => onPreview(null)}
             onclick={() => onNode(node!.id)}
             oncontextmenu={(event) => {
               event.preventDefault();
@@ -204,11 +192,6 @@
       />
       <div class="rows">
         {#each searchResults as node}<button
-            onpointerenter={(event) => {
-              const rect = event.currentTarget.getBoundingClientRect();
-              onPreview(node.id, rect.right + 8, rect.top - 4, 160);
-            }}
-            onpointerleave={() => onPreview(null)}
             onclick={() => onNode(node.id)}
             oncontextmenu={(event) => {
               event.preventDefault();
