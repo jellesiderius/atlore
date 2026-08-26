@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: atlore
+          POSTGRES_USER: atlore
+          POSTGRES_PASSWORD: atlore
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U atlore -d atlore"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      ORIGIN: http://localhost:3000
+      DATABASE_URL: postgres://atlore:atlore@localhost:5432/atlore
+      REDIS_URL: redis://localhost:6379
+      REALTIME_SECRET: atlore-ci-realtime-secret-at-least-32-characters
+      STORAGE_PATH: /tmp/atlore-storage
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run db:migrate
+      - run: npm run db:seed
+      - run: npm run check
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm run test:e2e

@@ -1,0 +1,15 @@
+node_modules
+.svelte-kit
+build
+coverage
+playwright-report
+test-results
+.env
+.env.*
+!.env.example
+storage/*
+!storage/.gitkeep
+*.log
+.DS_Store
+.idea
+Mindmap space en simulatie (1)
