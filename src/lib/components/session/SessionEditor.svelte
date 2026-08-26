@@ -5,7 +5,7 @@
   import type { MenuItem } from '$lib/components/ui/ContextMenu.svelte';
   import RichTextEditor from '$lib/components/richtext/RichTextEditor.svelte';
   import { debounce } from '$lib/client/api';
-  import { referencedNodeIds } from '$lib/domain/text';
+  import { normalizeBody, referencedNodeIds } from '$lib/domain/text';
   import type {
     NodePost,
     NodeType,
@@ -25,6 +25,9 @@
     types,
     posts,
     currentUserName,
+    liveBody,
+    liveUser,
+    liveCursors = [],
     canWrite,
     canStart,
     canHistory,
@@ -36,6 +39,8 @@
     pick,
     save,
     saveScratch,
+    onLiveBody,
+    onLiveCursor,
     createSession,
     trash,
     history,
@@ -51,6 +56,14 @@
     types: NodeType[];
     posts: NodePost[];
     currentUserName: string;
+    liveBody?: Paragraph[];
+    liveUser?: string;
+    liveCursors?: {
+      userId: string;
+      userName: string;
+      userColor: string;
+      offset: number;
+    }[];
     canWrite: boolean;
     canStart: boolean;
     canHistory: boolean;
@@ -62,6 +75,8 @@
     pick: (id: string) => void;
     save: (sessionId: string, value: Record<string, unknown>, keepalive?: boolean) => Promise<void>;
     saveScratch: (sessionId: string, body: Paragraph[], keepalive?: boolean) => Promise<void>;
+    onLiveBody?: (sessionId: string, body: Paragraph[]) => void;
+    onLiveCursor?: (sessionId: string, offset: number | null) => void;
     createSession: () => void;
     trash: () => void;
     history: () => void;
@@ -87,9 +102,25 @@
   // svelte-ignore state_referenced_locally -- this keyed editor must keep saving to its owning session
   const ownedSessionId = session?.id ?? '';
   let keepalive = false;
-  let dirtyBody = false;
-  let dirtyNotes = false;
+  let dirtyBody = $state(false);
+  let dirtyNotes = $state(false);
+  let dirtyHeader = $state(false);
+  let displayedStatus = $derived(
+    liveUser && !dirtyBody ? t('session.liveUpdate', { name: liveUser }) : saved
+  );
   let mounted = false;
+  $effect(() => {
+    if (!session || dirtyBody) return;
+    const incomingBody = liveBody ?? session.body;
+    const incoming = JSON.stringify(incomingBody);
+    if (incoming === JSON.stringify(sessionBody)) return;
+    sessionBody = normalizeBody(incomingBody);
+  });
+  $effect(() => {
+    if (!session || dirtyHeader) return;
+    title = session.title;
+    worldDate = session.worldDate;
+  });
   const saveBody = debounce(async (body: Paragraph[]) => {
     if (!ownedSessionId) return;
     await save(ownedSessionId, { body }, keepalive);
@@ -107,6 +138,7 @@
   function bodyChanged(body: Paragraph[]) {
     sessionBody = body;
     dirtyBody = true;
+    onLiveBody?.(ownedSessionId, body);
     syncUnloadGuard();
     saved = t('common.saving');
     saveBody(body);
@@ -120,8 +152,12 @@
   }
   async function headerSave() {
     if (!ownedSessionId) return;
-    await save(ownedSessionId, { title, worldDate });
-    flash();
+    try {
+      await save(ownedSessionId, { title, worldDate });
+      flash();
+    } finally {
+      dirtyHeader = false;
+    }
   }
   function flash() {
     saved = t('node.saved');
@@ -143,6 +179,7 @@
   }
   onDestroy(() => {
     mounted = false;
+    if (ownedSessionId) onLiveCursor?.(ownedSessionId, null);
     window.removeEventListener('beforeunload', flushForNavigation);
     flushPending();
   });
@@ -183,7 +220,7 @@
         aria-label={t('session.trash')}
         use:tooltip={t('session.trash')}
         onclick={trash}><Icon name="trash" size={16} /></button
-      >{/if}<span>{saved}</span>{#if canStart}<button
+      >{/if}<span>{displayedStatus}</span>{#if canStart}<button
         class="primary-button start"
         onclick={createSession}><Icon name="plus" size={15} /> {t('session.start')}</button
       >{/if}
@@ -195,6 +232,7 @@
             bind:value={worldDate}
             disabled={!canWrite}
             placeholder={t('session.worldDate')}
+            oninput={() => (dirtyHeader = true)}
             onblur={headerSave}
           />
         </div>
@@ -203,14 +241,17 @@
           aria-label={t('session.title')}
           bind:value={title}
           disabled={!canWrite}
+          oninput={() => (dirtyHeader = true)}
           onblur={headerSave}
         /><RichTextEditor
-          body={sessionBody}
+          body={!dirtyBody && liveBody ? liveBody : sessionBody}
           {nodes}
           {types}
           readonly={!canWrite}
           placeholder={t('session.editorPlaceholder')}
           onChange={bodyChanged}
+          remoteCursors={liveCursors}
+          onCursor={(offset) => onLiveCursor?.(ownedSessionId, offset)}
           {openNode}
           {previewNode}
           createNode={createMention}

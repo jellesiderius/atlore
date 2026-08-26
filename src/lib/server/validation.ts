@@ -94,7 +94,8 @@ export const nodeUpdateSchema = z.object({
   trashed: z.boolean().optional()
 });
 
-export const descriptionSchema = z.object({ body: bodySchema, shared: z.boolean() });
+export const descriptionSchema = z.object({ body: bodySchema });
+export const nodeNoteSchema = z.object({ body: bodySchema });
 
 export const linkSchema = z.object({ sourceId: z.uuid(), targetId: z.uuid() });
 

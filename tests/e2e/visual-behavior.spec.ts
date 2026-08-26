@@ -9,9 +9,8 @@ async function openDemoCampaign(page: import('@playwright/test').Page) {
   await expect(page.getByLabel('Interactieve kennisgraaf')).toBeVisible();
 }
 
-test('secundaire dark-mode tekst behoudt leesbaar contrast', async ({ page }) => {
-  await page.goto('/auth/login');
-  const contrast = await page.evaluate(() => {
+async function themeValues(page: import('@playwright/test').Page) {
+  return page.evaluate(() => {
     const root = getComputedStyle(document.documentElement);
     const rgb = (value: string) => {
       const color = value.trim();
@@ -20,7 +19,10 @@ test('secundaire dark-mode tekst behoudt leesbaar contrast', async ({ page }) =>
             .slice(1)
             .match(/.{2}/g)!
             .map((channel) => Number.parseInt(channel, 16))
-        : color.match(/[\d.]+/g)!.slice(0, 3).map(Number);
+        : color
+            .match(/[\d.]+/g)!
+            .slice(0, 3)
+            .map(Number);
       return channels.map((channel) => channel / 255);
     };
     const luminance = (value: string) => {
@@ -46,6 +48,11 @@ test('secundaire dark-mode tekst behoudt leesbaar contrast', async ({ page }) =>
       muted: ratio(root.getPropertyValue('--text-3'), panel)
     };
   });
+}
+
+test('secundaire dark-mode tekst behoudt leesbaar contrast', async ({ page }) => {
+  await page.goto('/auth/login');
+  const contrast = await themeValues(page);
 
   expect(contrast.tokens).toEqual({
     canvas: '#1a1816',
@@ -55,6 +62,49 @@ test('secundaire dark-mode tekst behoudt leesbaar contrast', async ({ page }) =>
   });
   expect(contrast.secondary).toBeGreaterThanOrEqual(4.5);
   expect(contrast.muted).toBeGreaterThanOrEqual(4.5);
+});
+
+test('light mode gebruikt een warm en volledig leesbaar kleurenpalet', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('atlore-theme', 'light'));
+  await page.goto('/auth/login');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  const contrast = await themeValues(page);
+
+  expect(contrast.tokens).toEqual({
+    canvas: '#f5f3ef',
+    text: '#1a1816',
+    secondary: '#4f4b47',
+    muted: '#69645f'
+  });
+  expect(contrast.secondary).toBeGreaterThanOrEqual(4.5);
+  expect(contrast.muted).toBeGreaterThanOrEqual(4.5);
+});
+
+test('verborgen nodes hebben de ghoststijl uit het prototype', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name.includes('mobile'), 'De Explorer is op mobiel ingeklapt.');
+  await page.addInitScript(() => {
+    Object.assign(window, { __atloreHiddenRings: [] as { alpha: number; dash: number[] }[] });
+    const prototype = CanvasRenderingContext2D.prototype;
+    const originalStroke = prototype.stroke;
+    prototype.stroke = function (path?: Path2D) {
+      const dash = this.getLineDash();
+      if (dash.length && this.canvas.getAttribute('aria-label') === 'Interactieve kennisgraaf') {
+        (window as any).__atloreHiddenRings.push({ alpha: this.globalAlpha, dash });
+      }
+      return Reflect.apply(originalStroke, this, path === undefined ? [] : [path]);
+    };
+  });
+  await openDemoCampaign(page);
+  await page.waitForFunction(() => (window as any).__atloreHiddenRings.length > 0);
+
+  const rings = await page.evaluate(() => structuredClone((window as any).__atloreHiddenRings));
+  expect(rings.some((ring: { alpha: number }) => ring.alpha > 0.5 && ring.alpha < 0.8)).toBe(true);
+  const hiddenRow = page.locator('.group-items button.hidden').first();
+  await expect(hiddenRow).toBeVisible();
+  await expect(hiddenRow.locator('em')).toHaveText('◌');
+  expect(await hiddenRow.evaluate((element) => getComputedStyle(element).color)).toBe(
+    'rgb(161, 158, 158)'
+  );
 });
 
 test('de auth-achtergrond bevat opstijgende vuurvonken', async ({ page }) => {
@@ -158,6 +208,14 @@ test('tooltips en tekst-hoverinspectie volgen het prototype', async ({ page }, t
   await expect(preview).toContainText(nodeTitle);
   expect(Math.round((await preview.boundingBox())!.width)).toBe(316);
 
+  await nodeReference.click({ button: 'right' });
+  await expect(page.getByRole('menu')).toBeVisible();
+  await expect(preview).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await page.mouse.move(700, 500);
+  await nodeReference.hover();
+  await expect(preview).toBeVisible();
+
   await preview.getByRole('button', { name: 'Openen', exact: true }).hover();
   await expect(preview).toBeVisible();
   await preview.getByRole('button', { name: 'Openen', exact: true }).click();
@@ -196,8 +254,8 @@ test('graphlijnen zijn gebogen en Explorer-klikken volgen het prototype', async 
   await expect(page.locator('.node-preview')).toHaveCount(0);
   await page.waitForTimeout(450);
   const cameraPositions = await page.evaluate(() =>
-    (window as any).__atloreCameraFrames.map(({ x, y }: { x: number; y: number }) =>
-      `${x.toFixed(1)}:${y.toFixed(1)}`
+    (window as any).__atloreCameraFrames.map(
+      ({ x, y }: { x: number; y: number }) => `${x.toFixed(1)}:${y.toFixed(1)}`
     )
   );
   expect(new Set(cameraPositions).size).toBeGreaterThan(4);
@@ -260,9 +318,7 @@ test('icon controls tonen de gedeelde Atlore-tooltip', async ({ page }, testInfo
   await expect(page.getByRole('tooltip')).toHaveText('Graph');
 });
 
-test('node-popover staat bij de selectie en opent het juiste dossier', async ({
-  page
-}) => {
+test('node-popover staat bij de selectie en opent het juiste dossier', async ({ page }) => {
   await page.addInitScript(() => {
     Object.assign(window, {
       __atloreGraphNodes: [] as { x: number; y: number; alpha: number }[]

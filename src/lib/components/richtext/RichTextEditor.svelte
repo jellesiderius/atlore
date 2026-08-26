@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import RemoteCursors, { type RemoteCursor } from './RemoteCursors.svelte';
   import TextSurface from './TextSurface.svelte';
   import { searchNodes, fold } from '$lib/domain/search';
   import { findNodeTitleMatches, normalizeBody } from '$lib/domain/text';
@@ -21,7 +22,9 @@
     previewNode,
     createNode,
     showContext,
-    showNodeContext
+    showNodeContext,
+    remoteCursors = [],
+    onCursor
   }: {
     body: Paragraph[];
     nodes: WorldNode[];
@@ -37,9 +40,12 @@
     createNode?: (title: string, insert: (id: string) => void) => void;
     showContext?: (x: number, y: number, items: MenuItem[]) => void;
     showNodeContext?: (id: string, x: number, y: number, items?: MenuItem[]) => void;
+    remoteCursors?: RemoteCursor[];
+    onCursor?: (offset: number | null) => void;
   } = $props();
 
-  let editor: HTMLDivElement;
+  let editorShell = $state<HTMLDivElement>(undefined!);
+  let editor = $state<HTMLDivElement>(undefined!);
   let menu = $state<{ query: string; x: number; y: number; index: number } | null>(null);
   let mentionAnchor: { node: Text; start: number; end: number } | null = null;
   let suggestionTimer: ReturnType<typeof setTimeout>;
@@ -66,17 +72,20 @@
     const outside = (event: PointerEvent) => {
       if (!editor.contains(event.target as Node)) menu = null;
     };
+    const selectionChanged = () => reportCursor();
     document.addEventListener('pointerdown', outside);
+    document.addEventListener('selectionchange', selectionChanged);
     return () => {
       document.removeEventListener('pointerdown', outside);
+      document.removeEventListener('selectionchange', selectionChanged);
       clearTimeout(suggestionTimer);
+      onCursor?.(null);
     };
   });
 
   $effect(() => {
     const signature = JSON.stringify(body);
-    if (editor && signature !== lastExternal && document.activeElement !== editor)
-      render(normalizeBody(body));
+    if (editor && signature !== lastExternal) render(normalizeBody(body));
   });
 
   function render(value: Paragraph[]) {
@@ -99,30 +108,62 @@
     element.dataset.ref = id;
     element.contentEditable = 'false';
     element.textContent = node?.title ?? `✦ ${t('editor.secret')}`;
-    const color = node ? typeMap.get(node.type)?.colorDark : 'var(--text-3)';
-    element.style.setProperty('--ref-color', color ?? 'var(--text-3)');
+    const type = node ? typeMap.get(node.type) : undefined;
+    element.style.setProperty('--ref-color-dark', type?.colorDark ?? 'var(--text-3)');
+    element.style.setProperty('--ref-color-light', type?.colorLight ?? 'var(--text-3)');
     return element;
   }
 
   function parse(): Paragraph[] {
-    const paragraphElements = [...editor.childNodes];
-    const paragraphs = paragraphElements.map((root) => {
-      const segs: Paragraph['segs'] = [];
-      const pushText = (value: string) => {
-        const last = segs.at(-1);
-        if (last?.t === 'txt') last.v += value;
-        else segs.push({ t: 'txt', v: value });
-      };
-      const walk = (current: Node) => {
-        if (current.nodeType === Node.TEXT_NODE) return pushText(current.textContent ?? '');
-        if (current instanceof HTMLElement && current.dataset.ref)
-          return segs.push({ t: 'ref', id: current.dataset.ref });
-        if (current instanceof HTMLBRElement) return;
-        current.childNodes.forEach(walk);
-      };
-      walk(root);
-      return { segs: segs.length ? segs : [{ t: 'txt' as const, v: '' }] };
-    });
+    const paragraphs: Paragraph[] = [];
+    let segs: Paragraph['segs'] = [];
+    let justBroke = false;
+    const blockTags = new Set(['DIV', 'P', 'LI', 'H1', 'H2', 'H3', 'BLOCKQUOTE']);
+    const appendText = (value: string) => {
+      const lines = value.replace(/\r/g, '').split('\n');
+      lines.forEach((line, index) => {
+        if (line) {
+          const last = segs.at(-1);
+          if (last?.t === 'txt') last.v += line;
+          else segs.push({ t: 'txt', v: line });
+          justBroke = false;
+        }
+        if (index < lines.length - 1) breakParagraph();
+      });
+    };
+    const breakParagraph = () => {
+      paragraphs.push({ segs: segs.length ? segs : [{ t: 'txt', v: '' }] });
+      segs = [];
+      justBroke = true;
+    };
+    const walk = (current: Node, root = false) => {
+      if (current.nodeType === Node.TEXT_NODE) {
+        appendText(current.textContent ?? '');
+        return;
+      }
+      if (current instanceof HTMLElement && current.dataset.ref) {
+        segs.push({ t: 'ref', id: current.dataset.ref });
+        justBroke = false;
+        return;
+      }
+      if (current instanceof HTMLBRElement) {
+        breakParagraph();
+        return;
+      }
+      const isNestedBlock =
+        !root && current instanceof HTMLElement && blockTags.has(current.tagName);
+      if (isNestedBlock && segs.length) breakParagraph();
+      current.childNodes.forEach((child) => walk(child));
+      if (isNestedBlock && (!justBroke || segs.length)) breakParagraph();
+    };
+
+    for (const child of editor.childNodes) {
+      const isBlock = child instanceof HTMLElement && blockTags.has(child.tagName);
+      if (isBlock && segs.length) breakParagraph();
+      walk(child, isBlock);
+      if (isBlock && (!justBroke || segs.length)) breakParagraph();
+    }
+    if (segs.length || !paragraphs.length) breakParagraph();
     return normalizeBody(paragraphs);
   }
 
@@ -133,6 +174,22 @@
     detectMention();
     clearTimeout(suggestionTimer);
     suggestionTimer = setTimeout(markSuggestions, 650);
+    queueMicrotask(reportCursor);
+  }
+
+  function reportCursor() {
+    if (!onCursor || !editor) return;
+    const selection = document.getSelection();
+    if (!selection?.rangeCount || !selection.anchorNode || !editor.contains(selection.anchorNode))
+      return;
+    try {
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      range.setEnd(selection.anchorNode, selection.anchorOffset);
+      onCursor(range.cloneContents().textContent?.length ?? 0);
+    } catch {
+      onCursor(null);
+    }
   }
 
   function detectMention() {
@@ -430,23 +487,28 @@
   label={surfaceLabel || t(readonly ? 'editor.readSurface' : 'editor.writeSurface')}
   {compact}
 >
-  <div
-    bind:this={editor}
-    class="editor"
-    class:readonly
-    contenteditable={!readonly}
-    role="textbox"
-    tabindex={readonly ? -1 : 0}
-    aria-multiline="true"
-    aria-label={ariaLabel || t('editor.ariaLabel')}
-    data-placeholder={placeholder || t('editor.placeholder')}
-    oninput={changed}
-    onkeydown={keydown}
-    onclick={clicked}
-    onpointerover={preview}
-    onpointerout={previewOut}
-    oncontextmenu={contextmenu}
-  ></div>
+  <div class="editor-shell" bind:this={editorShell}>
+    <div
+      bind:this={editor}
+      class="editor"
+      class:readonly
+      contenteditable={!readonly}
+      role="textbox"
+      tabindex={readonly ? -1 : 0}
+      aria-multiline="true"
+      aria-label={ariaLabel || t('editor.ariaLabel')}
+      data-placeholder={placeholder || t('editor.placeholder')}
+      oninput={changed}
+      onkeydown={keydown}
+      onclick={clicked}
+      onfocus={reportCursor}
+      onblur={() => onCursor?.(null)}
+      onpointerover={preview}
+      onpointerout={previewOut}
+      oncontextmenu={contextmenu}
+    ></div>
+    <RemoteCursors host={editorShell} content={editor} cursors={remoteCursors} />
+  </div>
 </TextSurface>
 {#if menu}
   <div class="mention-menu" style:left={`${menu.x}px`} style:top={`${menu.y}px`} role="listbox">
@@ -475,6 +537,9 @@
 {/if}
 
 <style>
+  .editor-shell {
+    position: relative;
+  }
   .editor {
     min-height: 160px;
     font-size: 15px;
@@ -498,6 +563,7 @@
     margin-bottom: 1em;
   }
   :global(.editor [data-ref]) {
+    --ref-color: var(--ref-color-dark);
     display: inline;
     padding: 1px 6px;
     border-radius: 5px;
@@ -505,6 +571,9 @@
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ref-color) 24%, transparent);
     color: var(--ref-color);
     cursor: pointer;
+  }
+  :global(:root[data-theme='light'] .editor [data-ref]) {
+    --ref-color: var(--ref-color-light);
   }
   :global(.editor [data-ref]:hover) {
     background: color-mix(in srgb, var(--ref-color) 20%, transparent);

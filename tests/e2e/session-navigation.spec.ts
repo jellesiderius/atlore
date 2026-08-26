@@ -204,9 +204,9 @@ test('paneel-, dossier- en campagne-instellingentabs herstellen via URL en brows
 
     await page.goBack();
     await expect(page).not.toHaveURL(/nodeTab=/);
-    await expect(page.getByText('Jouw beschrijving', { exact: true })).toBeVisible();
+    await expect(page.getByText('Gedeelde omschrijving', { exact: true })).toBeVisible();
     await page.reload();
-    await expect(page.getByText('Jouw beschrijving', { exact: true })).toBeVisible();
+    await expect(page.getByText('Gedeelde omschrijving', { exact: true })).toBeVisible();
     expect(pageErrors).toEqual([]);
   } finally {
     await removeWorkspace(page, workspace.campaignId);

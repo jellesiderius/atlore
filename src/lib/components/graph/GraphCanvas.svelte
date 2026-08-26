@@ -16,6 +16,7 @@
     nodes,
     links,
     types,
+    theme = 'dark',
     selected = null,
     settings,
     onSelect,
@@ -27,6 +28,7 @@
     nodes: WorldNode[];
     links: WorldLink[];
     types: NodeType[];
+    theme?: 'dark' | 'light';
     selected?: string | null;
     settings: ForceSettings;
     onSelect: (id: string | null, clientX?: number, clientY?: number) => void;
@@ -81,6 +83,12 @@
     moved: boolean;
   } | null = null;
   let hover: string | null = null;
+  let graphColors: Record<string, string> = {
+    '--ember': '#f0913f',
+    '--line': '#37332f',
+    '--text': '#eae8e6',
+    '--text-3': '#a19e9e'
+  };
   let activeNodes = $derived(nodes.filter((node) => !node.trashedAt));
   let activeNodeIds = $derived(new Set(activeNodes.map((node) => node.id)));
   let activeLinks = $derived(
@@ -176,6 +184,17 @@
   });
   $effect(() => {
     drawAfterSelection(selected);
+  });
+  $effect(() => {
+    void theme;
+    const styles = getComputedStyle(document.documentElement);
+    graphColors = Object.fromEntries(
+      Object.keys(graphColors).map((property) => [
+        property,
+        styles.getPropertyValue(property).trim() || graphColors[property]
+      ])
+    );
+    queueMicrotask(requestDraw);
   });
   function syncPositions(nodesToSync: WorldNode[]) {
     const ids = new Set(nodesToSync.map((node) => node.id));
@@ -307,32 +326,31 @@
         context.beginPath();
         context.moveTo(a.x, a.y);
         curveTo(a, b);
-        context.strokeStyle = strong
-          ? 'rgba(240,145,63,.88)'
-          : lit
-            ? 'rgba(161,158,158,.42)'
-            : draggingFocus
-              ? 'rgba(74,69,64,.025)'
-              : 'rgba(74,69,64,.07)';
+        context.strokeStyle = themeColor(
+          strong ? '--ember' : lit ? '--text-3' : '--line',
+          strong ? '#f0913f' : lit ? '#a19e9e' : '#37332f'
+        );
+        context.globalAlpha = strong ? 0.88 : lit ? 0.42 : draggingFocus ? 0.025 : 0.07;
         context.lineWidth = (strong ? 1.7 : lit ? 1 : 0.6) / camera.z;
         context.stroke();
       }
+      context.globalAlpha = 1;
       return;
     }
 
     appendLinkPath();
-    context.strokeStyle = highlighted
-      ? draggingFocus
-        ? 'rgba(74,69,64,.025)'
-        : 'rgba(74,69,64,.07)'
-      : 'rgba(161,158,158,.36)';
+    context.strokeStyle = themeColor(highlighted ? '--line' : '--text-3', '#a19e9e');
+    context.globalAlpha = highlighted ? (draggingFocus ? 0.025 : 0.07) : 0.36;
     context.lineWidth = (highlighted ? 0.6 : 0.9) / camera.z;
     context.stroke();
+    context.globalAlpha = 1;
     if (!focusId) return;
     appendLinkPath((link) => link.sourceId === focusId || link.targetId === focusId);
-    context.strokeStyle = 'rgba(240,145,63,.88)';
+    context.strokeStyle = themeColor('--ember', '#f0913f');
+    context.globalAlpha = 0.88;
     context.lineWidth = 1.7 / camera.z;
     context.stroke();
+    context.globalAlpha = 1;
   }
   function drawLargeNodes(
     visible: WorldNode[],
@@ -343,11 +361,11 @@
     const groups = new Map<string, { color: string; alpha: number; nodes: WorldNode[] }>();
     const emphasized: WorldNode[] = [];
     for (const node of visible) {
-      if (highlighted?.has(node.id)) {
+      if (highlighted?.has(node.id) || !node.revealed) {
         emphasized.push(node);
         continue;
       }
-      const color = typeMap.get(node.type)?.colorDark ?? '#a19e9e';
+      const color = nodeColor(node);
       const alpha = highlighted ? (draggingFocus ? 0.07 : 0.14) : 0.88;
       const key = `${color}:${alpha}`;
       const group = groups.get(key) ?? { color, alpha, nodes: [] };
@@ -375,15 +393,14 @@
         const degree = adjacency.get(node.id)?.length ?? 0;
         const importance =
           (node.size === 'l' ? 3 : node.size === 'm' ? 2 : 1) + Math.min(3, Math.sqrt(degree));
-        if (importance >= (camera.z > 0.72 ? 3 : 4.5)) drawNodeLabel(node, false);
+        if (node.revealed && importance >= (camera.z > 0.72 ? 3 : 4.5)) drawNodeLabel(node);
       }
   }
   function drawGrid(focused: boolean) {
     const spacing = 34 * camera.z;
     const ox = ((camera.x % spacing) + spacing) % spacing,
       oy = ((camera.y % spacing) + spacing) % spacing;
-    context.fillStyle =
-      getComputedStyle(document.documentElement).getPropertyValue('--line').trim() || '#37332f';
+    context.fillStyle = themeColor('--line', '#37332f');
     context.globalAlpha = focused ? 0.1 : 0.36;
     for (let x = ox; x < width; x += spacing)
       for (let y = oy; y < height; y += spacing) {
@@ -404,9 +421,9 @@
     const degree = adjacency.get(node.id)?.length ?? 0;
     const radius = radiusFor(node, degree);
     const dim = highlighted && !highlighted.has(node.id);
-    const type = typeMap.get(node.type);
-    const color = type?.colorDark ?? '#a19e9e';
-    context.globalAlpha = dim ? (draggingFocus ? 0.07 : 0.14) : node.id === focusId ? 1 : 0.88;
+    const color = nodeColor(node);
+    const baseAlpha = dim ? (draggingFocus ? 0.07 : 0.14) : node.id === focusId ? 1 : 0.88;
+    context.globalAlpha = baseAlpha * (node.revealed ? 1 : 0.4);
     context.shadowBlur = node.id === focusId ? 20 : highlighted?.has(node.id) ? 7 : 0;
     context.shadowColor = color;
     context.beginPath();
@@ -414,7 +431,18 @@
     context.fillStyle = color;
     context.fill();
     context.shadowBlur = 0;
+    if (!node.revealed) {
+      context.globalAlpha = baseAlpha * 0.75;
+      context.setLineDash([3 / camera.z, 3 / camera.z]);
+      context.strokeStyle = color;
+      context.lineWidth = 1.2 / camera.z;
+      context.beginPath();
+      context.arc(position.x, position.y, radius + 4 / camera.z, 0, Math.PI * 2);
+      context.stroke();
+      context.setLineDash([]);
+    }
     if (node.id === focusId) {
+      context.globalAlpha = 1;
       context.beginPath();
       context.arc(position.x, position.y, radius + 6 / camera.z, 0, Math.PI * 2);
       context.strokeStyle = color;
@@ -429,10 +457,11 @@
       (camera.z > 0.42 && importance >= 2.5) ||
       node.id === focusId ||
       highlighted?.has(node.id);
-    if (show) drawNodeLabel(node, Boolean(dim));
+    context.globalAlpha = baseAlpha * (node.revealed ? 1 : 0.75);
+    if (show) drawNodeLabel(node);
     context.globalAlpha = 1;
   }
-  function drawNodeLabel(node: WorldNode, dim: boolean) {
+  function drawNodeLabel(node: WorldNode) {
     const position = positions.get(node.id);
     if (!position) return;
     const radius = radiusFor(node, adjacency.get(node.id)?.length ?? 0);
@@ -440,8 +469,17 @@
     context.font = `500 ${fontSize}px "IBM Plex Sans",system-ui`;
     context.textAlign = 'center';
     context.textBaseline = 'top';
-    context.fillStyle = dim ? 'rgba(234,232,230,.2)' : '#eae8e6';
+    context.fillStyle = themeColor(node.revealed ? '--text' : '--text-3', '#eae8e6');
     context.fillText(shorten(node.title, 24), position.x, position.y + radius + 7 / camera.z);
+  }
+  function nodeColor(node: WorldNode) {
+    const type = typeMap.get(node.type);
+    return (
+      (theme === 'light' ? type?.colorLight : type?.colorDark) ?? themeColor('--text-3', '#a19e9e')
+    );
+  }
+  function themeColor(property: string, fallback: string) {
+    return graphColors[property] || fallback;
   }
   function screenToWorld(x: number, y: number) {
     return { x: (x - camera.x) / camera.z, y: (y - camera.y) / camera.z };

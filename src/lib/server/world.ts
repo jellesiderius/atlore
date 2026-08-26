@@ -61,9 +61,6 @@ export async function createNode(campaignId: string, user: SessionUser, input: N
         updatedBy: user.id
       })
       .returning();
-    await tx
-      .insert(nodeDescriptions)
-      .values({ nodeId: created.id, userId: user.id, body: [], shared: true });
     for (const targetId of [...new Set(input.connectTo)]) {
       if (targetId === created.id) continue;
       const [sourceId, canonicalTarget] = canonicalPair(created.id, targetId);
@@ -145,8 +142,7 @@ export async function updateDescription(
   campaignId: string,
   nodeId: string,
   user: SessionUser,
-  body: Paragraph[],
-  shared: boolean
+  body: Paragraph[]
 ) {
   const membership = await requireRight(campaignId, user.id, 'edit');
   const node = await getNodeRow(campaignId, nodeId);
@@ -155,21 +151,49 @@ export async function updateDescription(
   await assertVisibleNodeIds(campaignId, [...referencedNodeIds(normalized)], user.id, membership);
   await saveNodeVersion(campaignId, node, user);
   await db
+    .update(nodes)
+    .set({
+      description: normalized,
+      descriptionPlainText: bodyToText(normalized),
+      updatedBy: user.id,
+      updatedAt: new Date()
+    })
+    .where(and(eq(nodes.id, nodeId), eq(nodes.campaignId, campaignId)));
+  await syncDescriptionLinks(campaignId, nodeId, user.id, normalized);
+  await invalidateCampaign(campaignId, 'descriptions');
+}
+
+export async function updateNodeNote(
+  campaignId: string,
+  nodeId: string,
+  user: SessionUser,
+  body: Paragraph[]
+) {
+  const membership = await requireRight(campaignId, user.id, 'write');
+  const node = await getNodeRow(campaignId, nodeId);
+  assertNodeVisible(node, user.id, membership);
+  const normalized = normalizeBody(body);
+  await assertVisibleNodeIds(campaignId, [...referencedNodeIds(normalized)], user.id, membership);
+  await db
     .insert(nodeDescriptions)
     .values({
       nodeId,
       userId: user.id,
       body: normalized,
       plainText: bodyToText(normalized),
-      shared,
+      shared: false,
       updatedAt: new Date()
     })
     .onConflictDoUpdate({
       target: [nodeDescriptions.nodeId, nodeDescriptions.userId],
-      set: { body: normalized, plainText: bodyToText(normalized), shared, updatedAt: new Date() }
+      set: {
+        body: normalized,
+        plainText: bodyToText(normalized),
+        shared: false,
+        updatedAt: new Date()
+      }
     });
-  await syncDescriptionLinks(campaignId, nodeId, user.id, normalized);
-  await invalidateCampaign(campaignId, 'descriptions');
+  await invalidateCampaign(campaignId, 'node-notes');
 }
 
 export async function connectNodes(
@@ -449,27 +473,13 @@ export async function restoreVersion(campaignId: string, versionId: string, user
       .set({
         title: version.snapshot.title,
         summary: version.snapshot.summary ?? '',
+        description: normalizeBody(version.snapshot.body),
+        descriptionPlainText: bodyToText(normalizeBody(version.snapshot.body)),
         updatedBy: user.id,
         updatedAt: new Date()
       })
       .where(eq(nodes.id, version.entityId));
-    await db
-      .insert(nodeDescriptions)
-      .values({
-        nodeId: version.entityId,
-        userId: user.id,
-        body: version.snapshot.body,
-        plainText: bodyToText(version.snapshot.body),
-        shared: true
-      })
-      .onConflictDoUpdate({
-        target: [nodeDescriptions.nodeId, nodeDescriptions.userId],
-        set: {
-          body: version.snapshot.body,
-          plainText: bodyToText(version.snapshot.body),
-          updatedAt: new Date()
-        }
-      });
+    await syncDescriptionLinks(campaignId, version.entityId, user.id, version.snapshot.body);
   }
   await invalidateCampaign(campaignId, 'versions');
 }
@@ -541,18 +551,13 @@ async function saveNodeVersion(
     .orderBy(desc(versions.createdAt))
     .limit(1);
   if (!force && latest && Date.now() - latest.createdAt.getTime() < 45_000) return;
-  const [description] = await db
-    .select({ body: nodeDescriptions.body })
-    .from(nodeDescriptions)
-    .where(and(eq(nodeDescriptions.nodeId, node.id), eq(nodeDescriptions.userId, user.id)))
-    .limit(1);
   await db.insert(versions).values({
     campaignId,
     entityType: 'node',
     entityId: node.id,
     byUserId: user.id,
     byName: user.name,
-    snapshot: { title: node.title, summary: node.summary, body: normalizeBody(description?.body) }
+    snapshot: { title: node.title, summary: node.summary, body: normalizeBody(node.description) }
   });
   await trimVersions(campaignId, 'node', node.id);
 }

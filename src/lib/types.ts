@@ -85,15 +85,6 @@ export interface NodeType {
   custom: boolean;
 }
 
-export interface NodeDescription {
-  userId: Id;
-  userName: string;
-  userColor: string;
-  body: Paragraph[];
-  shared: boolean;
-  own: boolean;
-}
-
 export interface GearItem {
   name: string;
   note: string;
@@ -105,6 +96,8 @@ export interface WorldNode {
   title: string;
   size: NodeSize;
   summary: string;
+  description: Paragraph[];
+  note: Paragraph[];
   revealed: boolean;
   visibility: Visibility;
   visibleWith: Id[];
@@ -120,7 +113,6 @@ export interface WorldNode {
   tags: string[];
   stats: Record<string, string>;
   gear: GearItem[];
-  descriptions: NodeDescription[];
   trashedAt: string | null;
   createdAt: string;
   updatedAt: string;

@@ -56,6 +56,9 @@
     theme = next;
     localStorage.setItem('atlore-theme', next);
     document.documentElement.dataset.theme = next;
+    document
+      .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+      ?.setAttribute('content', next === 'light' ? '#f5f3ef' : '#1a1816');
   }
 
   async function submit(event: SubmitEvent) {

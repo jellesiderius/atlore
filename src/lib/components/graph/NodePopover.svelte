@@ -61,7 +61,8 @@
     class="popover"
     role="dialog"
     aria-label={t('graph.detailsFor', { title: node.title })}
-    style:--node-color={type?.colorDark ?? 'var(--text-3)'}
+    style:--node-color-dark={type?.colorDark ?? 'var(--text-3)'}
+    style:--node-color-light={type?.colorLight ?? 'var(--text-3)'}
     style:left={`${left}px`}
     style:top={`${top}px`}
     style:width={`${popupWidth}px`}
@@ -88,9 +89,7 @@
       </div>{/if}
     <div class="spacer"></div>
     <div class="actions">
-      <button class="open" onclick={open}
-        ><Icon name="open" size={14} />{t('common.open')}</button
-      >
+      <button class="open" onclick={open}><Icon name="open" size={14} />{t('common.open')}</button>
       {#if canReveal}<button class:revealed={!node.revealed} onclick={toggleReveal}
           ><Icon name={node.revealed ? 'eye-off' : 'eye'} size={14} />{node.revealed
             ? t('graph.hide')
@@ -119,6 +118,7 @@
     z-index: 55;
   }
   .popover {
+    --node-color: var(--node-color-dark);
     position: absolute;
     display: flex;
     flex-direction: column;
@@ -129,6 +129,9 @@
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(16px);
     animation: lift-in 0.14s ease;
+  }
+  :global(:root[data-theme='light']) .popover {
+    --node-color: var(--node-color-light);
   }
   .cover {
     width: 100%;

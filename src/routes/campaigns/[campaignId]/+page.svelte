@@ -23,6 +23,7 @@
   import { api } from '$lib/client/api';
   import { createClientId } from '$lib/client/id';
   import { may } from '$lib/domain/permissions';
+  import { normalizeBody } from '$lib/domain/text';
   import { t } from '$lib/i18n/index.svelte';
   import type {
     MediaAsset,
@@ -86,8 +87,41 @@
     gravity: 0.3
   });
   let toasts = $state<Toast[]>([]);
+  let realtimeStatus = $state<'connecting' | 'connected' | 'offline'>('connecting');
+  let realtimeDrafts = $state<
+    Record<
+      string,
+      { body: Paragraph[]; revision: string; userId: string; userName: string; receivedAt: number }
+    >
+  >({});
+  type RealtimeCursor = {
+    userId: string;
+    userName: string;
+    userColor: string;
+    offset: number;
+    revision: string;
+    receivedAt: number;
+  };
+  let realtimeCursors = $state<Record<string, Record<string, RealtimeCursor>>>({});
+  let realtimeNodeDrafts = $state<
+    Record<
+      string,
+      { body: Paragraph[]; revision: string; userId: string; userName: string; receivedAt: number }
+    >
+  >({});
+  let realtimeNodeCursors = $state<Record<string, Record<string, RealtimeCursor>>>({});
   let refreshing = false;
   let refreshQueued = false;
+  let realtime: WebSocket | null = null;
+  let pendingRealtimeDraft: { sessionId: string; body: Paragraph[] } | null = null;
+  let realtimeDraftThrottle: ReturnType<typeof setTimeout> | undefined;
+  let pendingRealtimeCursor: { sessionId: string; offset: number } | null = null;
+  let realtimeCursorThrottle: ReturnType<typeof setTimeout> | undefined;
+  let pendingRealtimeNodeDraft: { nodeId: string; body: Paragraph[] } | null = null;
+  let realtimeNodeDraftThrottle: ReturnType<typeof setTimeout> | undefined;
+  let pendingRealtimeNodeCursor: { nodeId: string; offset: number } | null = null;
+  let realtimeNodeCursorThrottle: ReturnType<typeof setTimeout> | undefined;
+  const realtimeCursorExpiry = new Map<string, ReturnType<typeof setTimeout>>();
   let nodeMap = $derived(new Map(snapshot.nodes.map((node) => [node.id, node])));
   let popoverNode = $derived(popover ? nodeMap.get(popover) : undefined);
   let previewNodeEntry = $derived(previewId ? nodeMap.get(previewId) : undefined);
@@ -122,14 +156,16 @@
     };
     window.addEventListener('keydown', key);
     const restore = () => restoreWorkspaceUrl(new URL(location.href));
-    let realtime: WebSocket | null = null;
     let realtimeTimer: ReturnType<typeof setTimeout>;
+    let reconnectTimer: ReturnType<typeof setTimeout>;
     let realtimeConnecting = false;
+    let reconnectAttempt = 0;
     let suspended = false;
     let disposed = false;
     const connectRealtime = () => {
       suspended = false;
       if (disposed || realtimeConnecting || realtime) return;
+      realtimeStatus = 'connecting';
       realtimeConnecting = true;
       api<{ token: string; path: string }>(`/api/campaigns/${snapshot.campaign.id}/realtime`, {
         method: 'POST'
@@ -141,15 +177,32 @@
             `${protocol}//${location.host}${path}?token=${encodeURIComponent(token)}`
           );
           realtime = socket;
+          socket.onopen = () => {
+            reconnectAttempt = 0;
+            realtimeStatus = 'connected';
+          };
           socket.onmessage = (event) => {
-            const message = JSON.parse(event.data);
-            if (message.type === 'invalidate') {
-              clearTimeout(realtimeTimer);
-              realtimeTimer = setTimeout(refresh, 180);
+            try {
+              const message = JSON.parse(event.data);
+              if (message.type === 'session:draft') receiveSessionDraft(message);
+              if (message.type === 'session:presence') receiveSessionPresence(message);
+              if (message.type === 'node:draft') receiveNodeDraft(message);
+              if (message.type === 'node:presence') receiveNodePresence(message);
+              if (message.type === 'invalidate') {
+                clearTimeout(realtimeTimer);
+                realtimeTimer = setTimeout(refresh, 180);
+              }
+            } catch {
+              // Een beschadigd socketbericht mag de werkruimte niet onderbreken.
             }
           };
           socket.onclose = () => {
             if (realtime === socket) realtime = null;
+            if (disposed || suspended) return;
+            realtimeStatus = 'offline';
+            const delay = Math.min(8_000, 500 * 2 ** reconnectAttempt++);
+            clearTimeout(reconnectTimer);
+            reconnectTimer = setTimeout(connectRealtime, delay);
           };
         })
         .catch(() => undefined)
@@ -158,8 +211,10 @@
     const suspendRealtime = () => {
       suspended = true;
       clearTimeout(realtimeTimer);
+      clearTimeout(reconnectTimer);
       realtime?.close();
       realtime = null;
+      realtimeStatus = 'offline';
     };
     const restoreFromCache = (event: PageTransitionEvent) => {
       if (event.persisted) {
@@ -181,6 +236,12 @@
       window.removeEventListener('pagehide', suspendRealtime);
       clearTimeout(previewShowTimer);
       clearTimeout(previewHideTimer);
+      clearTimeout(realtimeDraftThrottle);
+      clearTimeout(realtimeCursorThrottle);
+      clearTimeout(realtimeNodeDraftThrottle);
+      clearTimeout(realtimeNodeCursorThrottle);
+      for (const timer of realtimeCursorExpiry.values()) clearTimeout(timer);
+      realtimeCursorExpiry.clear();
       suspendRealtime();
     };
   });
@@ -189,6 +250,9 @@
   }
   function applyTheme() {
     document.documentElement.dataset.theme = theme;
+    document
+      .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+      ?.setAttribute('content', theme === 'light' ? '#f5f3ef' : '#1a1816');
   }
   function toggleTheme() {
     theme = theme === 'dark' ? 'light' : 'dark';
@@ -332,6 +396,289 @@
     toasts = [...toasts, { id, text, action }];
     setTimeout(() => (toasts = toasts.filter((item) => item.id !== id)), 5000);
   }
+  function sendPendingRealtimeDraft() {
+    const pending = pendingRealtimeDraft;
+    pendingRealtimeDraft = null;
+    if (pending && realtime?.readyState === WebSocket.OPEN) {
+      const encoded = JSON.stringify({ type: 'session:draft', ...pending });
+      if (encoded.length <= 240 * 1024) realtime.send(encoded);
+    }
+    realtimeDraftThrottle = setTimeout(() => {
+      realtimeDraftThrottle = undefined;
+      if (pendingRealtimeDraft) sendPendingRealtimeDraft();
+    }, 75);
+  }
+  function broadcastSessionBody(sessionId: string, body: Paragraph[]) {
+    pendingRealtimeDraft = { sessionId, body: normalizeBody(body) };
+    if (!realtimeDraftThrottle) sendPendingRealtimeDraft();
+  }
+  function sendRealtimeCursor(sessionId: string, offset: number | null) {
+    if (realtime?.readyState !== WebSocket.OPEN) return;
+    realtime.send(JSON.stringify({ type: 'session:presence', sessionId, offset }));
+  }
+  function sendPendingRealtimeCursor() {
+    const pending = pendingRealtimeCursor;
+    pendingRealtimeCursor = null;
+    if (pending) sendRealtimeCursor(pending.sessionId, pending.offset);
+    realtimeCursorThrottle = setTimeout(() => {
+      realtimeCursorThrottle = undefined;
+      if (pendingRealtimeCursor) sendPendingRealtimeCursor();
+    }, 80);
+  }
+  function broadcastSessionCursor(sessionId: string, offset: number | null) {
+    if (!sessionId) return;
+    if (offset === null) {
+      if (pendingRealtimeCursor?.sessionId === sessionId) pendingRealtimeCursor = null;
+      sendRealtimeCursor(sessionId, null);
+      return;
+    }
+    pendingRealtimeCursor = { sessionId, offset };
+    if (!realtimeCursorThrottle) sendPendingRealtimeCursor();
+  }
+  function removeRealtimeCursor(sessionId: string, userId: string) {
+    const cursors = realtimeCursors[sessionId];
+    if (!cursors?.[userId]) return;
+    const { [userId]: _removed, ...remaining } = cursors;
+    const next = { ...realtimeCursors };
+    if (Object.keys(remaining).length) next[sessionId] = remaining;
+    else delete next[sessionId];
+    realtimeCursors = next;
+  }
+  function receiveSessionPresence(message: {
+    sessionId?: unknown;
+    offset?: unknown;
+    revision?: unknown;
+    userId?: unknown;
+    userName?: unknown;
+    userColor?: unknown;
+  }) {
+    if (
+      typeof message.sessionId !== 'string' ||
+      (message.offset !== null &&
+        (!Number.isInteger(message.offset) || Number(message.offset) < 0)) ||
+      typeof message.revision !== 'string' ||
+      typeof message.userId !== 'string' ||
+      message.userId === snapshot.currentUser.id ||
+      typeof message.userName !== 'string' ||
+      typeof message.userColor !== 'string' ||
+      !/^#[0-9a-f]{6}$/i.test(message.userColor) ||
+      !snapshot.sessions.some((session) => session.id === message.sessionId)
+    )
+      return;
+    const key = `${message.sessionId}:${message.userId}`;
+    clearTimeout(realtimeCursorExpiry.get(key));
+    if (message.offset === null) {
+      realtimeCursorExpiry.delete(key);
+      removeRealtimeCursor(message.sessionId, message.userId);
+      return;
+    }
+    const cursor: RealtimeCursor = {
+      userId: message.userId,
+      userName: message.userName,
+      userColor: message.userColor,
+      offset: Number(message.offset),
+      revision: message.revision,
+      receivedAt: Date.now()
+    };
+    realtimeCursors = {
+      ...realtimeCursors,
+      [message.sessionId]: {
+        ...realtimeCursors[message.sessionId],
+        [message.userId]: cursor
+      }
+    };
+    realtimeCursorExpiry.set(
+      key,
+      setTimeout(() => {
+        realtimeCursorExpiry.delete(key);
+        removeRealtimeCursor(message.sessionId as string, message.userId as string);
+      }, 20_000)
+    );
+  }
+  function sendPendingRealtimeNodeDraft() {
+    const pending = pendingRealtimeNodeDraft;
+    pendingRealtimeNodeDraft = null;
+    if (pending && realtime?.readyState === WebSocket.OPEN) {
+      const encoded = JSON.stringify({ type: 'node:draft', ...pending });
+      if (encoded.length <= 240 * 1024) realtime.send(encoded);
+    }
+    realtimeNodeDraftThrottle = setTimeout(() => {
+      realtimeNodeDraftThrottle = undefined;
+      if (pendingRealtimeNodeDraft) sendPendingRealtimeNodeDraft();
+    }, 75);
+  }
+  function broadcastNodeDescription(nodeId: string, body: Paragraph[]) {
+    pendingRealtimeNodeDraft = { nodeId, body: normalizeBody(body) };
+    if (!realtimeNodeDraftThrottle) sendPendingRealtimeNodeDraft();
+  }
+  function sendRealtimeNodeCursor(nodeId: string, offset: number | null) {
+    if (realtime?.readyState !== WebSocket.OPEN) return;
+    realtime.send(JSON.stringify({ type: 'node:presence', nodeId, offset }));
+  }
+  function sendPendingRealtimeNodeCursor() {
+    const pending = pendingRealtimeNodeCursor;
+    pendingRealtimeNodeCursor = null;
+    if (pending) sendRealtimeNodeCursor(pending.nodeId, pending.offset);
+    realtimeNodeCursorThrottle = setTimeout(() => {
+      realtimeNodeCursorThrottle = undefined;
+      if (pendingRealtimeNodeCursor) sendPendingRealtimeNodeCursor();
+    }, 80);
+  }
+  function broadcastNodeCursor(nodeId: string, offset: number | null) {
+    if (!nodeId) return;
+    if (offset === null) {
+      if (pendingRealtimeNodeCursor?.nodeId === nodeId) pendingRealtimeNodeCursor = null;
+      sendRealtimeNodeCursor(nodeId, null);
+      return;
+    }
+    pendingRealtimeNodeCursor = { nodeId, offset };
+    if (!realtimeNodeCursorThrottle) sendPendingRealtimeNodeCursor();
+  }
+  function removeRealtimeNodeCursor(nodeId: string, userId: string) {
+    const cursors = realtimeNodeCursors[nodeId];
+    if (!cursors?.[userId]) return;
+    const { [userId]: _removed, ...remaining } = cursors;
+    const next = { ...realtimeNodeCursors };
+    if (Object.keys(remaining).length) next[nodeId] = remaining;
+    else delete next[nodeId];
+    realtimeNodeCursors = next;
+  }
+  function receiveNodePresence(message: {
+    nodeId?: unknown;
+    offset?: unknown;
+    revision?: unknown;
+    userId?: unknown;
+    userName?: unknown;
+    userColor?: unknown;
+  }) {
+    if (
+      typeof message.nodeId !== 'string' ||
+      (message.offset !== null &&
+        (!Number.isInteger(message.offset) || Number(message.offset) < 0)) ||
+      typeof message.revision !== 'string' ||
+      typeof message.userId !== 'string' ||
+      message.userId === snapshot.currentUser.id ||
+      typeof message.userName !== 'string' ||
+      typeof message.userColor !== 'string' ||
+      !/^#[0-9a-f]{6}$/i.test(message.userColor) ||
+      !snapshot.nodes.some((node) => node.id === message.nodeId)
+    )
+      return;
+    const key = `node:${message.nodeId}:${message.userId}`;
+    clearTimeout(realtimeCursorExpiry.get(key));
+    if (message.offset === null) {
+      realtimeCursorExpiry.delete(key);
+      removeRealtimeNodeCursor(message.nodeId, message.userId);
+      return;
+    }
+    const cursor: RealtimeCursor = {
+      userId: message.userId,
+      userName: message.userName,
+      userColor: message.userColor,
+      offset: Number(message.offset),
+      revision: message.revision,
+      receivedAt: Date.now()
+    };
+    realtimeNodeCursors = {
+      ...realtimeNodeCursors,
+      [message.nodeId]: {
+        ...realtimeNodeCursors[message.nodeId],
+        [message.userId]: cursor
+      }
+    };
+    realtimeCursorExpiry.set(
+      key,
+      setTimeout(() => {
+        realtimeCursorExpiry.delete(key);
+        removeRealtimeNodeCursor(message.nodeId as string, message.userId as string);
+      }, 20_000)
+    );
+  }
+  function receiveNodeDraft(message: {
+    nodeId?: unknown;
+    body?: unknown;
+    revision?: unknown;
+    userId?: unknown;
+    userName?: unknown;
+  }) {
+    if (
+      typeof message.nodeId !== 'string' ||
+      !Array.isArray(message.body) ||
+      typeof message.revision !== 'string' ||
+      typeof message.userId !== 'string' ||
+      typeof message.userName !== 'string' ||
+      !snapshot.nodes.some((node) => node.id === message.nodeId)
+    )
+      return;
+    const draft = {
+      body: message.body as Paragraph[],
+      revision: message.revision,
+      userId: message.userId,
+      userName: message.userName,
+      receivedAt: Date.now()
+    };
+    realtimeNodeDrafts = { ...realtimeNodeDrafts, [message.nodeId]: draft };
+    snapshot = {
+      ...snapshot,
+      nodes: snapshot.nodes.map((node) =>
+        node.id === message.nodeId ? { ...node, description: normalizeBody(draft.body) } : node
+      )
+    };
+  }
+  function receiveSessionDraft(message: {
+    sessionId?: unknown;
+    body?: unknown;
+    revision?: unknown;
+    userId?: unknown;
+    userName?: unknown;
+  }) {
+    if (
+      typeof message.sessionId !== 'string' ||
+      !Array.isArray(message.body) ||
+      typeof message.revision !== 'string' ||
+      typeof message.userId !== 'string' ||
+      typeof message.userName !== 'string' ||
+      !snapshot.sessions.some((session) => session.id === message.sessionId)
+    )
+      return;
+    const draft = {
+      body: message.body as Paragraph[],
+      revision: message.revision,
+      userId: message.userId,
+      userName: message.userName,
+      receivedAt: Date.now()
+    };
+    realtimeDrafts = { ...realtimeDrafts, [message.sessionId]: draft };
+    snapshot = {
+      ...snapshot,
+      sessions: snapshot.sessions.map((session) =>
+        session.id === message.sessionId ? { ...session, body: normalizeBody(draft.body) } : session
+      )
+    };
+  }
+  function mergeRealtimeDrafts(incoming: WorkspaceSnapshot): WorkspaceSnapshot {
+    const remaining: typeof realtimeDrafts = {};
+    const sessions = incoming.sessions.map((session) => {
+      const draft = realtimeDrafts[session.id];
+      if (!draft) return session;
+      if (JSON.stringify(session.body) === JSON.stringify(draft.body)) return session;
+      if (Date.now() - draft.receivedAt > 15_000) return session;
+      remaining[session.id] = draft;
+      return { ...session, body: normalizeBody(draft.body) };
+    });
+    realtimeDrafts = remaining;
+    const remainingNodeDrafts: typeof realtimeNodeDrafts = {};
+    const nodes = incoming.nodes.map((node) => {
+      const draft = realtimeNodeDrafts[node.id];
+      if (!draft) return node;
+      if (JSON.stringify(node.description) === JSON.stringify(draft.body)) return node;
+      if (Date.now() - draft.receivedAt > 15_000) return node;
+      remainingNodeDrafts[node.id] = draft;
+      return { ...node, description: normalizeBody(draft.body) };
+    });
+    realtimeNodeDrafts = remainingNodeDrafts;
+    return { ...incoming, sessions, nodes };
+  }
   async function refresh() {
     if (refreshing) {
       refreshQueued = true;
@@ -342,7 +689,10 @@
       do {
         refreshQueued = false;
         const query = snapshot.viewAs ? `?viewAs=${encodeURIComponent(snapshot.viewAs.id)}` : '';
-        snapshot = await api(`/api/campaigns/${snapshot.campaign.id}/workspace${query}`);
+        const incoming = await api<WorkspaceSnapshot>(
+          `/api/campaigns/${snapshot.campaign.id}/workspace${query}`
+        );
+        snapshot = mergeRealtimeDrafts(incoming);
       } while (refreshQueued);
     } finally {
       refreshing = false;
@@ -424,6 +774,7 @@
   function showContext(x: number, y: number, items: MenuItem[]) {
     const available = items.filter(Boolean);
     if (!available.length) return;
+    dismissPreview();
     popover = null;
     context = {
       x,
@@ -619,7 +970,7 @@
 </script>
 
 <svelte:head><title>{snapshot.campaign.title} · Atlore</title></svelte:head>
-<main class="workspace">
+<main class="workspace" data-realtime={realtimeStatus}>
   <WorkspaceHeader
     campaign={snapshot.campaign}
     {panelOpen}
@@ -684,6 +1035,7 @@
           nodes={snapshot.nodes}
           links={snapshot.links}
           types={snapshot.nodeTypes}
+          {theme}
           {selected}
           settings={forceSettings}
           onSelect={graphSelect}
@@ -724,6 +1076,11 @@
             types={snapshot.nodeTypes}
             posts={snapshot.posts}
             currentUserName={snapshot.currentUser.name}
+            liveBody={currentSession ? realtimeDrafts[currentSession.id]?.body : undefined}
+            liveUser={currentSession ? realtimeDrafts[currentSession.id]?.userName : undefined}
+            liveCursors={currentSession
+              ? Object.values(realtimeCursors[currentSession.id] ?? {})
+              : []}
             canWrite={can('write')}
             canStart={can('session')}
             canHistory={can('history')}
@@ -748,11 +1105,15 @@
                 body: JSON.stringify(value),
                 keepalive
               });
+              const { [sessionId]: _persistedDraft, ...remainingDrafts } = realtimeDrafts;
+              realtimeDrafts = remainingDrafts;
               snapshot = {
                 ...snapshot,
                 sessions: snapshot.sessions.map((item) => (item.id === updated.id ? updated : item))
               };
             }}
+            onLiveBody={broadcastSessionBody}
+            onLiveCursor={broadcastSessionCursor}
             saveScratch={async (sessionId, body, keepalive = false) => {
               const url = `/api/campaigns/${snapshot.campaign.id}/sessions/${sessionId}/scratch`;
               const payload = { body };
@@ -817,6 +1178,9 @@
           nodes={snapshot.nodes}
           types={snapshot.nodeTypes}
           currentUserName={snapshot.currentUser.name}
+          liveCursors={Object.fromEntries(
+            Object.entries(realtimeCursors).map(([id, cursors]) => [id, Object.values(cursors)])
+          )}
           {openNode}
           {previewNode}
           openSession={(id) => {
@@ -843,12 +1207,15 @@
             sessions={snapshot.sessions}
             types={snapshot.nodeTypes}
             members={snapshot.members}
-            posts={snapshot.posts}
             media={snapshot.media}
             currentUserId={snapshot.currentUser.id}
+            liveBody={realtimeNodeDrafts[dossierNode.id]?.body}
+            liveUser={realtimeNodeDrafts[dossierNode.id]?.userName}
+            liveCursors={Object.values(realtimeNodeCursors[dossierNode.id] ?? {})}
             tab={nodeTab}
             onTab={(next) => navigateWorkspace({ nodeTab: next })}
             canEdit={can('edit')}
+            canWrite={can('write')}
             canImage={can('image')}
             canReveal={can('reveal')}
             canLink={can('link')}
@@ -860,28 +1227,36 @@
               navigateWorkspace({ view: 'session', sessionId: id, dossier: null });
             }}
             saveNode={(value) => patchNode(dossierNode.id, value)}
-            saveDescription={async (body, shared) => {
+            saveDescription={async (body) => {
               await api(
                 `/api/campaigns/${snapshot.campaign.id}/nodes/${dossierNode.id}/description`,
-                { method: 'PUT', body: JSON.stringify({ body, shared }) }
+                { method: 'PUT', body: JSON.stringify({ body }) }
               );
-            }}
-            connect={(id) => connect(dossierNode.id, id)}
-            {disconnect}
-            addPost={async (value) => {
-              await api(`/api/campaigns/${snapshot.campaign.id}/posts`, {
-                method: 'POST',
-                body: JSON.stringify(value)
-              });
               await refresh();
             }}
+            saveNote={async (body) => {
+              await api(`/api/campaigns/${snapshot.campaign.id}/nodes/${dossierNode.id}/note`, {
+                method: 'PUT',
+                body: JSON.stringify({ body })
+              });
+              snapshot = {
+                ...snapshot,
+                nodes: snapshot.nodes.map((node) =>
+                  node.id === dossierNode.id ? { ...node, note: normalizeBody(body) } : node
+                )
+              };
+            }}
+            onLiveBody={broadcastNodeDescription}
+            onLiveCursor={broadcastNodeCursor}
+            connect={(id) => connect(dossierNode.id, id)}
+            {disconnect}
             {upload}
             showHistory={() =>
               (history = {
                 type: 'node',
                 id: dossierNode.id,
                 title: dossierNode.title,
-                body: dossierNode.descriptions.find((item) => item.own)?.body ?? []
+                body: dossierNode.description
               })}
             createMention={mentionCreate}
             {showContext}

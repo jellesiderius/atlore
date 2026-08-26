@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test('taalkeuze vertaalt snippets, blijft bewaard en geldt voor serverfouten', async ({ page }) => {
   await page.goto('/auth/login');
+  await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'nl');
   await expect(page.getByRole('heading', { name: 'Welkom terug' })).toBeVisible();

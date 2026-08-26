@@ -8,6 +8,8 @@ const node = (id: string, title: string): WorldNode => ({
   type: 'npc',
   size: 'm',
   summary: '',
+  description: [{ segs: [{ t: 'txt', v: '' }] }],
+  note: [{ segs: [{ t: 'txt', v: '' }] }],
   revealed: true,
   visibility: 'all',
   visibleWith: [],
@@ -23,7 +25,6 @@ const node = (id: string, title: string): WorldNode => ({
   tags: [],
   stats: {},
   gear: [],
-  descriptions: [],
   trashedAt: null,
   createdAt: '',
   updatedAt: ''

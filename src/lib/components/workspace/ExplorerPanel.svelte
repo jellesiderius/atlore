@@ -116,6 +116,9 @@
     event.dataTransfer?.setData('application/x-atlore-node', id);
     if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copyMove';
   }
+  function typeColor(type?: NodeType) {
+    return (theme === 'light' ? type?.colorLight : type?.colorDark) ?? 'var(--text-3)';
+  }
 </script>
 
 <aside class:open aria-label={t('explorer.label')}>
@@ -146,11 +149,12 @@
             class="group"
           >
             <button class="group-head" onclick={() => toggle(type.key)}
-              ><i class:open={expanded.has(type.key)}>▶</i><span style:background={type.colorDark}
+              ><i class:open={expanded.has(type.key)}>▶</i><span style:background={typeColor(type)}
               ></span><b>{nodeTypeLabel(type)}</b><small>{items.length}</small></button
             >{#if expanded.has(type.key)}<div class="group-items">
                 {#each items.slice(0, items.length > 150 ? 40 : items.length) as node}<button
                     class:active={selected === node.id}
+                    class:hidden={!node.revealed}
                     draggable="true"
                     ondragstart={(event) => drag(event, node.id)}
                     onclick={() => onNode(node.id)}
@@ -158,8 +162,8 @@
                       event.preventDefault();
                       onContext(node.id, event.clientX, event.clientY);
                     }}
-                    ><span style:background={type.colorDark}></span><b>{node.title}</b
-                    >{#if !node.revealed}<em>✦</em>{/if}</button
+                    ><span style:background={typeColor(type)}></span><b>{node.title}</b
+                    >{#if !node.revealed}<em>◌</em>{/if}</button
                   >{/each}{#if items.length > 150}<div class="more">
                     {t('explorer.more', { count: items.length - 40 })}
                   </div>{/if}
@@ -175,7 +179,7 @@
               event.preventDefault();
               onContext(node!.id, event.clientX, event.clientY);
             }}
-            ><span style:background={typeMap.get(node!.type)?.colorDark}></span><b>{node!.title}</b
+            ><span style:background={typeColor(typeMap.get(node!.type))}></span><b>{node!.title}</b
             ><small
               >{typeMap.get(node!.type)
                 ? nodeTypeLabel(typeMap.get(node!.type)!, 'singular')
@@ -197,7 +201,7 @@
               event.preventDefault();
               onContext(node.id, event.clientX, event.clientY);
             }}
-            ><span style:background={typeMap.get(node.type)?.colorDark}></span><b>{node.title}</b
+            ><span style:background={typeColor(typeMap.get(node.type))}></span><b>{node.title}</b
             ><small
               >{typeMap.get(node.type)
                 ? nodeTypeLabel(typeMap.get(node.type)!, 'singular')
@@ -376,6 +380,14 @@
   .rows > button:hover {
     background: var(--bg-3);
     color: var(--text);
+  }
+  .group-items > button.hidden:not(.active):not(:hover) {
+    color: var(--text-3);
+  }
+  .group-items > button.hidden > span {
+    opacity: 0.4;
+    outline: 1px dashed currentColor;
+    outline-offset: 2px;
   }
   .group-items button > span,
   .rows button > span {

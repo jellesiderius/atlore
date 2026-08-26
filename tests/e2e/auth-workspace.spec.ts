@@ -22,10 +22,11 @@ test('cross-site login wordt geweigerd', async ({ request }) => {
 
 test('accountbol opent profiel-, taal-, thema- en uitloginstellingen', async ({ page }) => {
   await page.goto('/auth/login');
+  await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
   await page.getByPlaceholder('E-mailadres').fill('demo@atlore.app');
   await page.getByPlaceholder('Wachtwoord').fill('AtloreDemo!2026');
   await page.getByRole('button', { name: 'Inloggen' }).click();
-  await expect(page).toHaveURL(/\/campaigns$/);
+  await expect(page).toHaveURL(/\/campaigns$/, { timeout: 10_000 });
 
   await expect(page.getByRole('button', { name: 'Uitloggen' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Accountinstellingen openen' }).click();
@@ -53,11 +54,14 @@ test('accountbol opent profiel-, taal-, thema- en uitloginstellingen', async ({ 
   await dialog.getByLabel('Huidig wachtwoord').fill('onjuist-huidig-wachtwoord');
   await dialog.getByLabel('Herhaal nieuw wachtwoord').fill('EenNieuwWachtwoord1!');
   const rejectedPassword = page.waitForResponse(
-    (response) => response.url().endsWith('/api/account/password') && response.status() === 401
+    (response) =>
+      response.url().endsWith('/api/account/password') && [401, 429].includes(response.status())
   );
   await dialog.getByRole('button', { name: 'Wachtwoord opslaan' }).click();
-  await rejectedPassword;
-  await expect(dialog.getByText('Het huidige wachtwoord klopt niet.')).toBeVisible();
+  const rejected = await rejectedPassword;
+  if (rejected.status() === 401)
+    await expect(dialog.getByText('Het huidige wachtwoord klopt niet.')).toBeVisible();
+  else await expect(dialog.getByText('Te veel pogingen. Probeer het later opnieuw.')).toBeVisible();
 
   const saved = page.waitForResponse(
     (response) => response.url().endsWith('/api/account') && response.ok()

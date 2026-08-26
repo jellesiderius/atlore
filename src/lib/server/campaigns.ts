@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
 import { serverT } from '$lib/i18n/server';
 import { DEFAULT_RIGHTS, BUILTIN_NODE_TYPES } from '$lib/domain/constants';
@@ -195,45 +195,59 @@ export async function getWorkspace(
   if (viewAsId && actualMembership.role !== 'gm') {
     error(403, serverT('server.viewAsGmOnly'));
   }
-  const [memberRows, typeRows, nodeRows, linkRows, sessionRows, scratchRows, postRows, mediaRows] =
-    await Promise.all([
-      db
-        .select({
-          id: users.id,
-          name: users.name,
-          email: users.email,
-          color: users.color,
-          role: campaignMembers.role
-        })
-        .from(campaignMembers)
-        .innerJoin(users, eq(users.id, campaignMembers.userId))
-        .where(eq(campaignMembers.campaignId, campaignId))
-        .orderBy(asc(campaignMembers.joinedAt)),
-      db
-        .select()
-        .from(nodeTypes)
-        .where(eq(nodeTypes.campaignId, campaignId))
-        .orderBy(asc(nodeTypes.pluralName)),
-      db.select().from(nodes).where(eq(nodes.campaignId, campaignId)),
-      db.select().from(links).where(eq(links.campaignId, campaignId)),
-      db
-        .select()
-        .from(sessions)
-        .where(eq(sessions.campaignId, campaignId))
-        .orderBy(asc(sessions.sequence)),
-      db
-        .select()
-        .from(sessionScratch)
-        .innerJoin(sessions, eq(sessions.id, sessionScratch.sessionId))
-        .where(and(eq(sessions.campaignId, campaignId), eq(sessionScratch.userId, viewer.id))),
-      db
-        .select({ post: posts, name: users.name, color: users.color })
-        .from(posts)
-        .innerJoin(nodes, eq(nodes.id, posts.nodeId))
-        .innerJoin(users, eq(users.id, posts.userId))
-        .where(eq(nodes.campaignId, campaignId)),
-      db.select().from(media).where(eq(media.campaignId, campaignId))
-    ]);
+  const [
+    memberRows,
+    typeRows,
+    nodeRows,
+    linkRows,
+    sessionRows,
+    scratchRows,
+    nodeNoteRows,
+    postRows,
+    mediaRows
+  ] = await Promise.all([
+    db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        color: users.color,
+        role: campaignMembers.role
+      })
+      .from(campaignMembers)
+      .innerJoin(users, eq(users.id, campaignMembers.userId))
+      .where(eq(campaignMembers.campaignId, campaignId))
+      .orderBy(asc(campaignMembers.joinedAt)),
+    db
+      .select()
+      .from(nodeTypes)
+      .where(eq(nodeTypes.campaignId, campaignId))
+      .orderBy(asc(nodeTypes.pluralName)),
+    db.select().from(nodes).where(eq(nodes.campaignId, campaignId)),
+    db.select().from(links).where(eq(links.campaignId, campaignId)),
+    db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.campaignId, campaignId))
+      .orderBy(asc(sessions.sequence)),
+    db
+      .select()
+      .from(sessionScratch)
+      .innerJoin(sessions, eq(sessions.id, sessionScratch.sessionId))
+      .where(and(eq(sessions.campaignId, campaignId), eq(sessionScratch.userId, viewer.id))),
+    db
+      .select({ nodeId: nodeDescriptions.nodeId, body: nodeDescriptions.body })
+      .from(nodeDescriptions)
+      .innerJoin(nodes, eq(nodes.id, nodeDescriptions.nodeId))
+      .where(and(eq(nodes.campaignId, campaignId), eq(nodeDescriptions.userId, viewer.id))),
+    db
+      .select({ post: posts, name: users.name, color: users.color })
+      .from(posts)
+      .innerJoin(nodes, eq(nodes.id, posts.nodeId))
+      .innerJoin(users, eq(users.id, posts.userId))
+      .where(eq(nodes.campaignId, campaignId)),
+    db.select().from(media).where(eq(media.campaignId, campaignId))
+  ]);
 
   const requestedView =
     viewAsId && viewAsId !== viewer.id
@@ -255,29 +269,9 @@ export async function getWorkspace(
     )
   );
   const visibleIds = new Set(visibleRows.map((node) => node.id));
-  const descriptionRows = visibleRows.length
-    ? await db
-        .select({ description: nodeDescriptions, name: users.name, color: users.color })
-        .from(nodeDescriptions)
-        .innerJoin(users, eq(users.id, nodeDescriptions.userId))
-        .where(inArray(nodeDescriptions.nodeId, [...visibleIds]))
-    : [];
-
-  const descriptionsByNode = new Map<string, WorldNode['descriptions']>();
-  for (const row of descriptionRows) {
-    const own = row.description.userId === viewer.id;
-    if (!own && !row.description.shared) continue;
-    const list = descriptionsByNode.get(row.description.nodeId) ?? [];
-    list.push({
-      userId: row.description.userId,
-      userName: row.name,
-      userColor: row.color,
-      body: normalizeBody(row.description.body),
-      shared: row.description.shared,
-      own
-    });
-    descriptionsByNode.set(row.description.nodeId, list);
-  }
+  const notesByNode = new Map(
+    nodeNoteRows.map((row) => [row.nodeId, normalizeBody(row.body)] as const)
+  );
 
   const worldNodes: WorldNode[] = visibleRows.map((node) => ({
     id: node.id,
@@ -285,6 +279,8 @@ export async function getWorkspace(
     title: node.title,
     size: node.size,
     summary: node.summary,
+    description: normalizeBody(node.description),
+    note: notesByNode.get(node.id) ?? normalizeBody([]),
     revealed: node.revealed,
     visibility: node.visibility,
     visibleWith: node.visibleWith,
@@ -300,7 +296,6 @@ export async function getWorkspace(
     tags: node.tags,
     stats: node.stats,
     gear: node.gear,
-    descriptions: descriptionsByNode.get(node.id) ?? [],
     trashedAt: node.trashedAt?.toISOString() ?? null,
     createdAt: node.createdAt.toISOString(),
     updatedAt: node.updatedAt.toISOString()

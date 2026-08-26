@@ -56,7 +56,8 @@
   role="dialog"
   tabindex="-1"
   aria-label={t('graph.detailsFor', { title: node.title })}
-  style:--node-color={type?.colorDark ?? 'var(--text-3)'}
+  style:--node-color-dark={type?.colorDark ?? 'var(--text-3)'}
+  style:--node-color-light={type?.colorLight ?? 'var(--text-3)'}
   style:left={`${left}px`}
   style:top={`${top}px`}
   style:width={`${cardWidth}px`}
@@ -83,6 +84,7 @@
 
 <style>
   .node-preview {
+    --node-color: var(--node-color-dark);
     position: fixed;
     z-index: 70;
     display: flex;
@@ -95,6 +97,9 @@
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(16px);
     animation: preview-in 0.13s ease;
+  }
+  :global(:root[data-theme='light']) .node-preview {
+    --node-color: var(--node-color-light);
   }
   img {
     width: 100%;

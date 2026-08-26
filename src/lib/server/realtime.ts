@@ -3,7 +3,11 @@ import { env } from '$lib/server/config';
 
 export interface RealtimeClaims {
   userId: string;
+  userName: string;
+  userColor: string;
   campaignId: string;
+  canEdit: boolean;
+  canWrite: boolean;
   expiresAt: number;
 }
 
@@ -21,7 +25,16 @@ export function verifyRealtimeToken(token: string): RealtimeClaims | null {
   if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return null;
   try {
     const claims = JSON.parse(Buffer.from(payload, 'base64url').toString()) as RealtimeClaims;
-    if (!claims.userId || !claims.campaignId || claims.expiresAt < Date.now()) return null;
+    if (
+      !claims.userId ||
+      !claims.userName ||
+      !/^#[0-9a-f]{6}$/i.test(claims.userColor) ||
+      !claims.campaignId ||
+      typeof claims.canEdit !== 'boolean' ||
+      typeof claims.canWrite !== 'boolean' ||
+      claims.expiresAt < Date.now()
+    )
+      return null;
     return claims;
   } catch {
     return null;

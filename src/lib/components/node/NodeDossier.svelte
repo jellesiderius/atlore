@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import Icon from '$lib/components/ui/Icon.svelte';
   import type { MenuItem } from '$lib/components/ui/ContextMenu.svelte';
   import { tooltip } from '$lib/actions/tooltip';
@@ -6,13 +7,12 @@
   import RichTextView from '$lib/components/richtext/RichTextView.svelte';
   import { debounce } from '$lib/client/api';
   import { CHARACTER_FIELDS, PLACE_TYPES } from '$lib/domain/constants';
-  import { referencedNodeIds } from '$lib/domain/text';
+  import { normalizeBody, referencedNodeIds } from '$lib/domain/text';
   import { searchNodes } from '$lib/domain/search';
   import type {
     CampaignMember,
     NodeDossierTab,
     MediaAsset,
-    NodePost,
     NodeType,
     Paragraph,
     SessionEntry,
@@ -28,12 +28,15 @@
     sessions,
     types,
     members,
-    posts,
     media,
     currentUserId,
+    liveBody,
+    liveUser,
+    liveCursors = [],
     tab = 'overview',
     onTab = () => undefined,
     canEdit,
+    canWrite,
     canImage,
     canReveal,
     canLink,
@@ -44,9 +47,11 @@
     openSession,
     saveNode,
     saveDescription,
+    saveNote,
+    onLiveBody,
+    onLiveCursor,
     connect,
     disconnect,
-    addPost,
     upload,
     showHistory,
     createMention,
@@ -59,12 +64,20 @@
     sessions: SessionEntry[];
     types: NodeType[];
     members: CampaignMember[];
-    posts: NodePost[];
     media: MediaAsset[];
     currentUserId: string;
+    liveBody?: Paragraph[];
+    liveUser?: string;
+    liveCursors?: {
+      userId: string;
+      userName: string;
+      userColor: string;
+      offset: number;
+    }[];
     tab?: NodeDossierTab;
     onTab?: (tab: NodeDossierTab) => void;
     canEdit: boolean;
+    canWrite: boolean;
     canImage: boolean;
     canReveal: boolean;
     canLink: boolean;
@@ -74,16 +87,12 @@
     previewNode: (id: string | null, x?: number, y?: number, delay?: number) => void;
     openSession: (id: string) => void;
     saveNode: (value: Record<string, unknown>) => Promise<void>;
-    saveDescription: (body: Paragraph[], shared: boolean) => Promise<void>;
+    saveDescription: (body: Paragraph[]) => Promise<void>;
+    saveNote: (body: Paragraph[]) => Promise<void>;
+    onLiveBody?: (nodeId: string, body: Paragraph[]) => void;
+    onLiveCursor?: (nodeId: string, offset: number | null) => void;
     connect: (id: string) => Promise<void>;
     disconnect: (id: string) => Promise<void>;
-    addPost: (value: {
-      nodeId: string;
-      kind: 'note' | 'theory' | 'goal';
-      visibility: 'all' | 'me' | 'gm' | 'sel';
-      visibleWith: string[];
-      text: string;
-    }) => Promise<void>;
     upload: (file: File, purpose: 'image' | 'map') => Promise<MediaAsset>;
     showHistory: () => void;
     createMention: (title: string, insert: (id: string) => void) => void;
@@ -107,15 +116,9 @@
   // svelte-ignore state_referenced_locally -- the keyed dossier owns its edit buffer
   let gear = $state(node.gear.map((item) => ({ ...item })));
   let relationQuery = $state('');
-  let postText = $state('');
-  let postKind = $state<'note' | 'theory' | 'goal'>('note');
-  let postVisibility = $state<'all' | 'me' | 'gm' | 'sel'>('me');
   let busy = $state(false);
   let saved = $state('');
-  let own = $derived(node.descriptions.find((description) => description.userId === currentUserId));
-  let others = $derived(
-    node.descriptions.filter((description) => description.userId !== currentUserId)
-  );
+  let currentUser = $derived(members.find((member) => member.id === currentUserId));
   let related = $derived(
     links
       .filter((link) => link.sourceId === node.id || link.targetId === node.id)
@@ -134,20 +137,59 @@
   let mentions = $derived(
     sessions.filter((session) => referencedNodeIds(session.body).has(node.id))
   );
-  let nodePosts = $derived(posts.filter((post) => post.nodeId === node.id));
   let image = $derived(media.find((item) => item.id === node.imageMediaId));
   let mapImage = $derived(media.find((item) => item.id === node.mapMediaId));
   let typeMap = $derived(new Map(types.map((item) => [item.key, item])));
   // svelte-ignore state_referenced_locally -- the keyed dossier owns its edit buffer
-  let descriptionBody = $state<Paragraph[]>(own?.body ?? [{ segs: [{ t: 'txt', v: '' }] }]);
-  // svelte-ignore state_referenced_locally -- the keyed dossier owns its edit buffer
-  let shared = $state(own?.shared ?? true);
+  let descriptionBody = $state<Paragraph[]>(node.description);
+  // svelte-ignore state_referenced_locally -- the keyed dossier owns its private note buffer
+  let noteBody = $state<Paragraph[]>(node.note);
+  let dirtyDescription = $state(false);
+  let dirtyNote = $state(false);
+  $effect(() => {
+    if (dirtyDescription) return;
+    const incoming = liveBody ?? node.description;
+    if (JSON.stringify(incoming) !== JSON.stringify(descriptionBody))
+      descriptionBody = normalizeBody(incoming);
+  });
+  $effect(() => {
+    if (dirtyNote) return;
+    if (JSON.stringify(node.note) !== JSON.stringify(noteBody)) noteBody = normalizeBody(node.note);
+  });
   const saveBody = debounce(async (body: Paragraph[]) => {
+    try {
+      await saveDescription(body);
+      saved = t('node.saved');
+      setTimeout(() => (saved = ''), 1800);
+    } finally {
+      dirtyDescription = false;
+    }
+  }, 350);
+  const saveNoteBody = debounce(async (body: Paragraph[]) => {
+    try {
+      await saveNote(body);
+      saved = t('node.saved');
+      setTimeout(() => (saved = ''), 1800);
+    } finally {
+      dirtyNote = false;
+    }
+  }, 400);
+  function descriptionChanged(body: Paragraph[]) {
     descriptionBody = body;
-    await saveDescription(body, shared);
-    saved = t('node.saved');
-    setTimeout(() => (saved = ''), 1800);
-  }, 700);
+    dirtyDescription = true;
+    onLiveBody?.(node.id, body);
+    saveBody(body);
+  }
+  function noteChanged(body: Paragraph[]) {
+    noteBody = body;
+    dirtyNote = true;
+    saveNoteBody(body);
+  }
+  onDestroy(() => {
+    onLiveCursor?.(node.id, null);
+    void saveBody.flush();
+    void saveNoteBody.flush();
+  });
   async function saveHeader() {
     busy = true;
     try {
@@ -173,18 +215,6 @@
       ? visibleWith.filter((item) => item !== id)
       : [...visibleWith, id];
   }
-  async function submitPost(event: SubmitEvent) {
-    event.preventDefault();
-    if (!postText.trim()) return;
-    await addPost({
-      nodeId: node.id,
-      kind: postKind,
-      visibility: postVisibility,
-      visibleWith: [],
-      text: postText
-    });
-    postText = '';
-  }
   async function saveGame() {
     await saveNode({ stats, gear });
     saved = t('node.saved');
@@ -200,7 +230,10 @@
       onclick={close}><Icon name="back" size={17} /></button
     >
     <div>
-      <small style:color={typeMap.get(type)?.colorDark}
+      <small
+        class="type-label"
+        style:--type-color-dark={typeMap.get(type)?.colorDark}
+        style:--type-color-light={typeMap.get(type)?.colorLight}
         >{typeMap.get(type) ? nodeTypeLabel(typeMap.get(type)!, 'singular') : type}</small
       ><input
         aria-label={t('node.name')}
@@ -287,75 +320,57 @@
       >
       <div class="description-head">
         <div>
-          <div class="eyebrow">{t('node.yourDescription')}</div>
-          <small>{saved || t('node.mentionHint')}</small>
+          <div class="eyebrow">{t('node.globalDescription')}</div>
+          <small
+            >{liveUser && !dirtyDescription
+              ? t('node.liveUpdate', { name: liveUser })
+              : saved || t('node.mentionHint')}</small
+          >
         </div>
-        <button
-          class:shared
-          disabled={!canEdit}
-          onclick={async () => {
-            shared = !shared;
-            await saveDescription(descriptionBody, shared);
-          }}
-          ><Icon name={shared ? 'eye' : 'eye-off'} size={14} />{shared
-            ? t('node.sharedAtTable')
-            : t('node.privateForYou')}</button
-        >
+        <span class="shared"><Icon name="users" size={14} />{t('node.sharedAtTable')}</span>
       </div>
       <RichTextEditor
-        body={descriptionBody}
+        body={!dirtyDescription && liveBody ? liveBody : descriptionBody}
         {nodes}
         {types}
         readonly={!canEdit}
         placeholder={t('node.descriptionPlaceholder')}
-        onChange={saveBody}
+        onChange={descriptionChanged}
+        remoteCursors={liveCursors}
+        onCursor={(offset) => onLiveCursor?.(node.id, offset)}
         {openNode}
         {previewNode}
         createNode={createMention}
         {showContext}
         {showNodeContext}
       />
-      {#if others.length}<details>
-          <summary>{t('node.showOthers', { count: others.length })}</summary
-          >{#each others as description}<article style:border-left-color={description.userColor}>
-              <b style:color={description.userColor}>{description.userName}</b><RichTextView
-                body={description.body}
-                {nodes}
-                {types}
-                surface="compact"
-                {previewNode}
-                {openNode}
-              />
-            </article>{/each}
-        </details>{/if}
-      <div class="posts">
-        <div class="eyebrow">{t('node.notes')}</div>
-        {#each nodePosts as post}<article style:border-left-color={post.byColor}>
-            <header>
-              <b style:color={post.byColor}>{post.byName}</b><span
-                >{t(`node.postKind.${post.kind}`)} · {t(
-                  `node.postVisibility.${post.visibility}`
-                )}</span
-              >
-            </header>
-            <p>{post.text}</p>
-          </article>{/each}
-        {#if canEdit}<form onsubmit={submitPost}>
-            <div>
-              <select bind:value={postKind}
-                ><option value="note">{t('node.postKind.note')}</option><option value="theory"
-                  >{t('node.postKind.theory')}</option
-                ><option value="goal">{t('node.postKind.goal')}</option></select
-              ><select bind:value={postVisibility}
-                ><option value="me">{t('node.postVisibility.me')}</option><option value="all"
-                  >{t('node.postVisibility.all')}</option
-                ><option value="gm">{t('node.postVisibility.gm')}</option></select
-              >
+      <section class="node-scratch">
+        <div class="scratch-head">
+          <span style:background={currentUser?.color ?? 'var(--ember)'}></span>
+          <div>
+            <div class="eyebrow">
+              {t('node.privateNotes', {
+                name: currentUser?.name ?? ''
+              })}
             </div>
-            <textarea class="field" bind:value={postText} rows="2" placeholder={t('node.newNote')}
-            ></textarea><button class="secondary-button">{t('node.addNote')}</button>
-          </form>{/if}
-      </div>
+            <small>{t('node.privateHint')}</small>
+          </div>
+        </div>
+        <RichTextEditor
+          body={noteBody}
+          {nodes}
+          {types}
+          compact
+          readonly={!canWrite}
+          placeholder={t('node.privatePlaceholder')}
+          onChange={noteChanged}
+          {openNode}
+          {previewNode}
+          createNode={createMention}
+          {showContext}
+          {showNodeContext}
+        />
+      </section>
     {:else if tab === 'map'}
       {#if mapImage}<div class="node-map">
           <img src={mapImage.url} alt={t('atlas.mapOf', { title: node.title })} />
@@ -494,6 +509,12 @@
     letter-spacing: 0.11em;
     text-transform: uppercase;
   }
+  .type-label {
+    color: var(--type-color-dark, var(--text-3));
+  }
+  :global(:root[data-theme='light']) .type-label {
+    color: var(--type-color-light, var(--text-3));
+  }
   .dossier > header input {
     width: 100%;
     border: 0;
@@ -630,69 +651,28 @@
     color: var(--text-3);
     font-size: 10.5px;
   }
-  details {
-    margin-top: 24px;
-    border-top: 1px solid var(--line);
-    padding-top: 12px;
-  }
-  details summary {
-    cursor: pointer;
-    color: var(--text-3);
-    font-size: 12px;
-  }
-  details article {
-    margin-top: 12px;
-    padding-left: 12px;
-    border-left: 2px solid;
-  }
-  details article > b {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 11px;
-  }
-  .posts {
-    margin-top: 26px;
+  .node-scratch {
+    margin-top: 30px;
     padding-top: 18px;
     border-top: 1px solid var(--line);
   }
-  .posts > article {
-    margin: 8px 0;
-    padding: 9px 10px;
-    border-left: 2px solid;
-    background: var(--bg-2);
-    border-radius: 0 8px 8px 0;
-  }
-  .posts article header {
+  .scratch-head {
     display: flex;
-    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
   }
-  .posts article b {
-    font-size: 11px;
+  .scratch-head > span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
   }
-  .posts article span {
-    font: 9px var(--font-mono);
+  .scratch-head small {
+    font-size: 10.5px;
     color: var(--text-3);
   }
-  .posts article p {
-    margin: 5px 0 0;
-    color: var(--text-2);
-    font-size: 12.5px;
-  }
-  .posts form > div {
-    display: flex;
-    gap: 4px;
-    margin: 8px 0 4px;
-  }
-  .posts select {
-    min-height: 28px;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    background: var(--bg-3);
-    font-size: 11px;
-  }
-  .posts form .secondary-button {
-    margin-top: 5px;
-    min-height: 32px;
+  .node-scratch :global(.editor) {
+    min-height: 100px;
   }
   .map-upload {
     height: 330px;

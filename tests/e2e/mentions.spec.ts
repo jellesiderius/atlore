@@ -49,6 +49,7 @@ test('een @ toont nodes en biedt daaronder een nieuwe node aan', async ({ page }
 
   try {
     await page.goto(`/campaigns/${campaignId}`);
+    await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
     await page.getByRole('button', { name: 'Sessie', exact: true }).click();
     const editor = page.getByRole('textbox', { name: 'Teksteditor' }).first();
     await editor.click();

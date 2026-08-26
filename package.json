@@ -29,9 +29,9 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx scripts/migrate.ts",
-    "db:seed": "tsx scripts/seed.ts",
-    "db:seed:10k": "tsx scripts/seed-load-test.ts",
+    "db:migrate": "svelte-kit sync && tsx scripts/migrate.ts",
+    "db:seed": "svelte-kit sync && tsx scripts/seed.ts",
+    "db:seed:10k": "svelte-kit sync && tsx scripts/seed-load-test.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {

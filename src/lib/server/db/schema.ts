@@ -177,6 +177,8 @@ export const nodes = pgTable(
     title: text('title').notNull(),
     size: nodeSize('size').notNull().default('m'),
     summary: text('summary').notNull().default(''),
+    description: jsonb('description').$type<Paragraph[]>().notNull().default([]),
+    descriptionPlainText: text('description_plain_text').notNull().default(''),
     revealed: boolean('revealed').notNull().default(true),
     visibility: visibility('visibility').notNull().default('all'),
     visibleWith: uuid('visible_with')

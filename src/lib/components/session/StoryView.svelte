@@ -8,6 +8,7 @@
     nodes,
     types,
     currentUserName,
+    liveCursors = {},
     openNode,
     previewNode,
     openSession
@@ -17,6 +18,10 @@
     nodes: WorldNode[];
     types: NodeType[];
     currentUserName: string;
+    liveCursors?: Record<
+      string,
+      { userId: string; userName: string; userColor: string; offset: number }[]
+    >;
     openNode: (id: string) => void;
     previewNode: (id: string | null, x?: number, y?: number, delay?: number) => void;
     openSession: (id: string) => void;
@@ -41,6 +46,7 @@
           body={session.body}
           {nodes}
           {types}
+          remoteCursors={liveCursors[session.id] ?? []}
           {previewNode}
           {openNode}
         />{#if scratchMap.has(session.id)}<details>

@@ -5,7 +5,15 @@
 
   let { children } = $props();
 
-  onMount(initializeLocale);
+  onMount(() => {
+    initializeLocale();
+    const theme = localStorage.getItem('atlore-theme') === 'light' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = theme;
+    document
+      .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+      ?.setAttribute('content', theme === 'light' ? '#f5f3ef' : '#1a1816');
+    document.documentElement.dataset.hydrated = 'true';
+  });
 </script>
 
 {@render children()}

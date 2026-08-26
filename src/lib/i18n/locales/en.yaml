@@ -261,9 +261,14 @@ node:
   selected: Selected players
   onlyMe: Only me
   yourDescription: Your description
+  globalDescription: Shared description
+  liveUpdate: Updated live by {{name}}
   sharedAtTable: Shared with the table
   privateForYou: Only for you
   descriptionPlaceholder: What do you know about this node?
+  privateNotes: Notes · only {{name}}
+  privateHint: Personal node notes; nobody else can see this.
+  privatePlaceholder: Your own notes about this node…
   showOthers: Show what others wrote · {{count}}
   newNote: New note…
   addNote: Add
@@ -337,6 +342,7 @@ session:
   trash: Move to trash
   worldDate: Date in the game world
   editorPlaceholder: What happens at the table? Type @ to mention someone or something…
+  liveUpdate: Updated live by {{name}}
   unconnected: From this session · not connected yet
   connectAll: All {{count}}
   privateNotes: Notes · only {{name}}
@@ -354,6 +360,7 @@ story:
   privateNotes: Notes · only {{name}}
   noSessions: No sessions to tell yet.
 editor:
+  remoteCursor: '{{name}} is typing here'
   placeholder: Start writing…
   ariaLabel: Text editor
   writeSurface: Writing area

@@ -3,6 +3,11 @@
 @import '@fontsource/ibm-plex-sans/600.css';
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/500.css';
+
+html:not([data-hydrated]) body {
+  pointer-events: none;
+  cursor: progress;
+}
 @import '@fontsource/instrument-serif/400.css';
 @import 'tailwindcss';
 
@@ -35,17 +40,17 @@
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --canvas: #f5f4f0;
-  --canvas-deep: #ebe9e2;
-  --bg-2: #fbfaf7;
-  --bg-3: #eeece7;
-  --line: #e2dfd7;
-  --line-2: #ccc7bb;
-  --text: #1b1d21;
-  --text-2: #555b64;
-  --text-3: #858990;
-  --ember: #b5590a;
-  --ember-soft: rgba(181, 89, 10, 0.1);
+  --canvas: #f5f3ef;
+  --canvas-deep: #eae7e1;
+  --bg-2: #fdfcf9;
+  --bg-3: #e9e5df;
+  --line: #d8d2ca;
+  --line-2: #b9b1a8;
+  --text: #1a1816;
+  --text-2: #4f4b47;
+  --text-3: #69645f;
+  --ember: #a94e08;
+  --ember-soft: rgba(169, 78, 8, 0.11);
   --danger: #aa4038;
 }
 

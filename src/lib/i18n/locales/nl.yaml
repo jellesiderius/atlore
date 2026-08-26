@@ -261,9 +261,14 @@ node:
   selected: Gekozen
   onlyMe: Alleen ik
   yourDescription: Jouw beschrijving
+  globalDescription: Gedeelde omschrijving
+  liveUpdate: Live bijgewerkt door {{name}}
   sharedAtTable: Gedeeld met de tafel
   privateForYou: Alleen voor jou
   descriptionPlaceholder: Wat weet jij over deze node?
+  privateNotes: Aantekeningen · alleen {{name}}
+  privateHint: Persoonlijke node-notities; niemand anders ziet dit.
+  privatePlaceholder: Eigen aantekeningen over deze node…
   showOthers: Toon wat anderen schreven · {{count}}
   newNote: Nieuwe notitie…
   addNote: Toevoegen
@@ -337,6 +342,7 @@ session:
   trash: Naar prullenbak
   worldDate: Datum in de spelwereld
   editorPlaceholder: Wat gebeurt er aan tafel? Typ @ om iemand of iets te noemen…
+  liveUpdate: Live bijgewerkt door {{name}}
   unconnected: Uit deze sessie · nog niet verbonden
   connectAll: Alle {{count}}
   privateNotes: Aantekeningen · alleen {{name}}
@@ -354,6 +360,7 @@ story:
   privateNotes: Aantekeningen · alleen {{name}}
   noSessions: Nog geen sessies om te vertellen.
 editor:
+  remoteCursor: '{{name}} typt hier'
   placeholder: Begin te schrijven…
   ariaLabel: Teksteditor
   writeSurface: Schrijfvlak

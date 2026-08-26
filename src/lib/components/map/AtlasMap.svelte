@@ -37,6 +37,7 @@
   let moving = $state<string | null>(null);
   let stage = $state<HTMLDivElement>();
   let busy = $state(false);
+  let uploadError = $state('');
   let mapOwner = $derived(mapKey === 'campaign' ? null : nodes.find((node) => node.id === mapKey));
   let mediaId = $derived(mapKey === 'campaign' ? campaign.mapMediaId : mapOwner?.mapMediaId);
   let asset = $derived(media.find((item) => item.id === mediaId));
@@ -57,13 +58,18 @@
   );
   let typeMap = $derived(new Map(types.map((type) => [type.key, type])));
   async function picked(event: Event) {
-    const file = (event.currentTarget as HTMLInputElement).files?.[0];
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
     if (!file) return;
     busy = true;
+    uploadError = '';
     try {
       await uploadMain(file);
+    } catch (error) {
+      uploadError = error instanceof Error ? error.message : t('errors.uploadFailed');
     } finally {
       busy = false;
+      input.value = '';
     }
   }
   function wheel(event: WheelEvent) {
@@ -138,7 +144,18 @@
       }}
       aria-label={t('atlas.fit')}
       use:tooltip={t('atlas.fit')}><Icon name="fit" size={16} /></button
-    >
+    >{#if canUpload && asset}<label
+        class="header-upload"
+        class:disabled={busy}
+        aria-label={t('atlas.upload')}
+        use:tooltip={t('atlas.upload')}
+        ><Icon name="upload" size={16} /><input
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          disabled={busy}
+          onchange={picked}
+        /></label
+      >{/if}
     <div class="zoom">
       <button
         onclick={() => (zoom = Math.max(0.3, zoom - 0.2))}
@@ -223,15 +240,17 @@
         <Icon name="atlas" size={42} />
         <h2 class="serif-title">{t('atlas.emptyHeading')}</h2>
         <p>{t('atlas.emptyText')}</p>
-        {#if canUpload}<label class="primary-button"
+        {#if canUpload}<label class="primary-button upload-control" class:disabled={busy}
             >{busy ? t('common.upload') : t('atlas.upload')}<input
               type="file"
               accept="image/jpeg,image/png,image/webp,image/gif"
+              disabled={busy}
               onchange={picked}
             /></label
           >{/if}
       </div>{/if}
   </div>
+  {#if uploadError}<p class="upload-error" role="alert">{uploadError}</p>{/if}
 </section>
 
 <style>
@@ -264,6 +283,7 @@
     flex: 1;
   }
   .atlas > header > button,
+  .header-upload,
   .zoom button {
     width: 34px;
     height: 34px;
@@ -271,6 +291,12 @@
     border-radius: 8px;
     background: transparent;
     color: var(--text-3);
+  }
+  .header-upload {
+    position: relative;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
   }
   .zoom {
     display: flex;
@@ -357,13 +383,40 @@
   .upload-empty p {
     margin: 0 0 16px;
   }
-  .upload-empty label {
+  .upload-control {
+    position: relative;
     display: grid;
     place-items: center;
     cursor: pointer;
   }
-  .upload-empty input {
-    display: none;
+  .header-upload input,
+  .upload-control input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .header-upload.disabled,
+  .upload-control.disabled {
+    cursor: wait;
+    opacity: 0.65;
+  }
+  .upload-error {
+    position: absolute;
+    z-index: 5;
+    bottom: 18px;
+    left: 50%;
+    margin: 0;
+    padding: 8px 12px;
+    transform: translateX(-50%);
+    border: 1px solid color-mix(in srgb, var(--danger, #d96868) 55%, var(--line));
+    border-radius: 8px;
+    background: var(--bg-2);
+    color: var(--danger, #d96868);
+    font-size: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
   }
   @media (max-width: 600px) {
     .atlas > header select {
