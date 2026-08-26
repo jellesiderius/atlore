@@ -80,6 +80,43 @@ test('light mode gebruikt een warm en volledig leesbaar kleurenpalet', async ({ 
   expect(contrast.muted).toBeGreaterThanOrEqual(4.5);
 });
 
+test('het graph-stippenraster blijft zichtbaar bij elk zoomniveau', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.assign(window, {
+      __atloreGraphDots: [] as { radius: number; alpha: number; color: string }[]
+    });
+    const prototype = CanvasRenderingContext2D.prototype;
+    const originalClear = prototype.clearRect;
+    const originalArc = prototype.arc;
+    prototype.clearRect = function (...args) {
+      if (this.canvas.getAttribute('aria-label') === 'Interactieve kennisgraaf')
+        (window as any).__atloreGraphDots = [];
+      return originalClear.apply(this, args);
+    };
+    prototype.arc = function (x, y, radius, start, end, counterclockwise) {
+      if (
+        radius >= 1 &&
+        radius <= 2 &&
+        this.canvas.getAttribute('aria-label') === 'Interactieve kennisgraaf'
+      ) {
+        (window as any).__atloreGraphDots.push({
+          radius,
+          alpha: this.globalAlpha,
+          color: String(this.fillStyle)
+        });
+      }
+      return originalArc.call(this, x, y, radius, start, end, counterclockwise);
+    };
+  });
+  await openDemoCampaign(page);
+  await page.waitForFunction(() => (window as any).__atloreGraphDots?.length > 20);
+  const dots = await page.evaluate(() => structuredClone((window as any).__atloreGraphDots));
+
+  expect(dots.every((dot: { radius: number }) => dot.radius >= 1.15)).toBe(true);
+  expect(Math.max(...dots.map((dot: { alpha: number }) => dot.alpha))).toBeGreaterThan(0.08);
+  expect(dots.every((dot: { color: string }) => dot.color === '#ffffff')).toBe(true);
+});
+
 test('verborgen nodes hebben de ghoststijl uit het prototype', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name.includes('mobile'), 'De Explorer is op mobiel ingeklapt.');
   await page.addInitScript(() => {

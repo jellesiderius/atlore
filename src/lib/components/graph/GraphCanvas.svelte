@@ -275,7 +275,7 @@
     const focusId = pointer?.nodeId ?? hover ?? selected;
     const highlighted = focusId ? new Set([focusId, ...(adjacency.get(focusId) ?? [])]) : null;
     const draggingFocus = Boolean(pointer?.nodeId);
-    drawGrid(Boolean(focusId));
+    drawDots();
     context.save();
     context.translate(camera.x, camera.y);
     context.scale(camera.z, camera.z);
@@ -396,16 +396,23 @@
         if (node.revealed && importance >= (camera.z > 0.72 ? 3 : 4.5)) drawNodeLabel(node);
       }
   }
-  function drawGrid(focused: boolean) {
-    const spacing = 34 * camera.z;
-    const ox = ((camera.x % spacing) + spacing) % spacing,
-      oy = ((camera.y % spacing) + spacing) % spacing;
-    context.fillStyle = themeColor('--line', '#37332f');
-    context.globalAlpha = focused ? 0.1 : 0.36;
-    for (let x = ox; x < width; x += spacing)
-      for (let y = oy; y < height; y += spacing) {
+  function drawDots() {
+    let spacing = 46 * camera.z;
+    while (spacing < 26) spacing *= 2;
+    while (spacing > 104) spacing /= 2;
+    const fade =
+      Math.min(1, Math.max(0, (spacing - 26) / 16)) *
+      Math.min(1, Math.max(0, (104 - spacing) / 20 + 0.35));
+    if (fade <= 0.02) return;
+    const ox = camera.x % spacing,
+      oy = camera.y % spacing;
+    context.fillStyle = theme === 'light' ? '#000000' : '#ffffff';
+    context.globalAlpha = (theme === 'light' ? 0.1 : 0.13) * fade;
+    const radius = Math.min(1.7, 1.15 + camera.z * 0.3);
+    for (let x = ox - spacing; x < width + spacing; x += spacing)
+      for (let y = oy - spacing; y < height + spacing; y += spacing) {
         context.beginPath();
-        context.arc(x, y, 0.7, 0, Math.PI * 2);
+        context.arc(x, y, radius, 0, Math.PI * 2);
         context.fill();
       }
     context.globalAlpha = 1;
