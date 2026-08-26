@@ -20,6 +20,12 @@ describe('rich-textmodel', () => {
     expect(normalizeBody([])).toEqual([{ segs: [{ t: 'txt', v: '' }] }]);
   });
 
+  it('vervangt opgeslagen node-referenties door leesbare titels', () => {
+    const body = [{ segs: [{ t: 'ref' as const, id: 'ecb1e6c5-eaa5-4b6a-8b38-51d053e31fe7' }] }];
+    expect(bodyToText(body, () => 'Bertje')).toBe('Bertje');
+    expect(bodyToText(body, () => '✦ geheim')).not.toMatch(/[0-9a-f]{8}-[0-9a-f-]{27,}/i);
+  });
+
   it('vindt alle volledige nodenamen in hetzelfde tekstblok', () => {
     const matches = findNodeTitleMatches(
       'jan en kees en kare en bertje\nToen jan2 jan2 en jan janjan\njan klaas kees',

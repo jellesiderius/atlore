@@ -1,12 +1,19 @@
 <script lang="ts">
   import type { NodeType, WorldNode } from '$lib/types';
-  import { nodeTypeLabel, t } from '$lib/i18n/index.svelte';
+  import { t } from '$lib/i18n/index.svelte';
   let {
     node,
     type,
     secret = false,
-    onclick
-  }: { node?: WorldNode; type?: NodeType; secret?: boolean; onclick?: () => void } = $props();
+    onclick,
+    previewNode
+  }: {
+    node?: WorldNode;
+    type?: NodeType;
+    secret?: boolean;
+    onclick?: () => void;
+    previewNode?: (id: string | null, x?: number, y?: number, delay?: number) => void;
+  } = $props();
   let color = $derived(type?.colorDark ?? 'var(--text-3)');
 </script>
 
@@ -18,15 +25,14 @@
     aria-label={secret || !node
       ? t('editor.secretNode')
       : t('editor.openNode', { title: node.title })}
+    onpointerenter={(event) => {
+      if (!node || secret) return;
+      const rect = event.currentTarget.getBoundingClientRect();
+      previewNode?.(node.id, rect.left - 12, rect.bottom + 8, 300);
+    }}
+    onpointerleave={() => previewNode?.(null)}
     {onclick}>{secret || !node ? `✦ ${t('editor.secret')}` : node.title}</button
   >
-  {#if node && !secret}
-    <span class="hover-card" role="tooltip" style:--chip-color={color}>
-      <small><i></i>{type ? nodeTypeLabel(type, 'singular') : node.type}</small>
-      <b>{node.title}</b>
-      <em>{node.summary || t('graph.noSummary')}</em>
-    </span>
-  {/if}
 </span>
 
 <style>
@@ -60,57 +66,5 @@
   button.secret {
     color: var(--text-3);
     font-style: italic;
-  }
-  .hover-card {
-    position: absolute;
-    z-index: 60;
-    left: 50%;
-    bottom: calc(100% + 8px);
-    width: 220px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    padding: 10px 11px;
-    border: 1px solid var(--line-2);
-    border-radius: 9px;
-    background: color-mix(in srgb, var(--bg-2) 96%, transparent);
-    box-shadow: 0 14px 38px rgba(0, 0, 0, 0.45);
-    color: var(--text);
-    opacity: 0;
-    pointer-events: none;
-    transform: translate(-50%, 4px);
-    transition:
-      opacity 0.12s,
-      transform 0.12s;
-  }
-  .chip-wrap:hover .hover-card,
-  .chip-wrap:focus-within .hover-card {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
-  .hover-card small {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    color: var(--chip-color);
-    font: 8px var(--font-mono);
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
-  }
-  .hover-card i {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--chip-color);
-  }
-  .hover-card b {
-    font: 18px var(--font-serif);
-    font-weight: 400;
-  }
-  .hover-card em {
-    color: var(--text-2);
-    font-size: 11px;
-    font-style: normal;
-    line-height: 1.4;
   }
 </style>

@@ -14,6 +14,7 @@
     uploadMain,
     pinNode,
     openNode,
+    previewNode,
     showNodeContext
   }: {
     campaign: Campaign;
@@ -25,6 +26,7 @@
     uploadMain: (file: File) => Promise<void>;
     pinNode: (id: string, value: Record<string, unknown>) => Promise<void>;
     openNode: (id: string) => void;
+    previewNode: (id: string | null, x?: number, y?: number, delay?: number) => void;
     showNodeContext: (id: string, x: number, y: number, items?: MenuItem[]) => void;
   } = $props();
   let mapKey = $state<string>('campaign');
@@ -176,7 +178,12 @@
             style:left={`${node.pinX! * 100}%`}
             style:top={`${node.pinY! * 100}%`}
             style:--marker-color={typeMap.get(node.type)?.colorDark}
-            title={node.title}
+            aria-label={node.title}
+            onpointerenter={(event) => {
+              const rect = event.currentTarget.getBoundingClientRect();
+              previewNode(node.id, rect.right + 8, rect.top - 4, 160);
+            }}
+            onpointerleave={() => previewNode(null)}
             onpointerdown={(event) => {
               event.stopPropagation();
               if (event.button !== 0) return;

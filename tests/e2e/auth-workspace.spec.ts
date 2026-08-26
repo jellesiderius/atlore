@@ -20,7 +20,57 @@ test('cross-site login wordt geweigerd', async ({ request }) => {
   expect(response.status()).toBe(403);
 });
 
-test('de workspace blijft werken zonder crypto.randomUUID', async ({ page }) => {
+test('accountbol opent profiel-, taal-, thema- en uitloginstellingen', async ({ page }) => {
+  await page.goto('/auth/login');
+  await page.getByPlaceholder('E-mailadres').fill('demo@atlore.app');
+  await page.getByPlaceholder('Wachtwoord').fill('AtloreDemo!2026');
+  await page.getByRole('button', { name: 'Inloggen' }).click();
+  await expect(page).toHaveURL(/\/campaigns$/);
+
+  await expect(page.getByRole('button', { name: 'Uitloggen' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Accountinstellingen openen' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Accountinstellingen' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel('Naam')).not.toHaveValue('');
+  await expect(dialog.getByLabel('E-mailadres')).toHaveValue('demo@atlore.app');
+  await expect(dialog.getByLabel('Huidig wachtwoord')).toBeVisible();
+  await expect(dialog.getByLabel('Nieuw wachtwoord', { exact: true })).toBeVisible();
+  await expect(dialog.getByLabel('Herhaal nieuw wachtwoord')).toBeVisible();
+  await expect(dialog.getByLabel('Taal')).toHaveValue('nl');
+  await expect(dialog.getByRole('button', { name: 'Uitloggen' })).toBeVisible();
+
+  await dialog.getByRole('button', { name: '☀ Licht' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  expect(await page.evaluate(() => localStorage.getItem('atlore-theme'))).toBe('light');
+  await dialog.getByRole('button', { name: '☾ Donker' }).click();
+
+  await dialog.getByLabel('Huidig wachtwoord').fill('niet-opslaan');
+  await dialog.getByLabel('Nieuw wachtwoord', { exact: true }).fill('EenNieuwWachtwoord1!');
+  await dialog.getByLabel('Herhaal nieuw wachtwoord').fill('EenAnderWachtwoord2!');
+  await dialog.getByRole('button', { name: 'Wachtwoord opslaan' }).click();
+  await expect(dialog.getByText('De nieuwe wachtwoorden zijn niet gelijk.')).toBeVisible();
+
+  await dialog.getByLabel('Huidig wachtwoord').fill('onjuist-huidig-wachtwoord');
+  await dialog.getByLabel('Herhaal nieuw wachtwoord').fill('EenNieuwWachtwoord1!');
+  const rejectedPassword = page.waitForResponse(
+    (response) => response.url().endsWith('/api/account/password') && response.status() === 401
+  );
+  await dialog.getByRole('button', { name: 'Wachtwoord opslaan' }).click();
+  await rejectedPassword;
+  await expect(dialog.getByText('Het huidige wachtwoord klopt niet.')).toBeVisible();
+
+  const saved = page.waitForResponse(
+    (response) => response.url().endsWith('/api/account') && response.ok()
+  );
+  await dialog.getByRole('button', { name: 'Account opslaan' }).click();
+  await saved;
+  await expect(dialog.getByText('Account opgeslagen.')).toBeVisible();
+
+  await dialog.getByRole('button', { name: 'Uitloggen' }).click();
+  await expect(page).toHaveURL(/\/auth\/login$/);
+});
+
+test('de workspace blijft werken zonder crypto.randomUUID', async ({ page, isMobile }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.addInitScript(() => {
@@ -35,6 +85,8 @@ test('de workspace blijft werken zonder crypto.randomUUID', async ({ page }) => 
   await page.getByRole('button', { name: 'Inloggen' }).click();
   await expect(page).toHaveURL(/\/campaigns$/);
   await page.getByText('Ember & Rust', { exact: true }).first().click();
+  if (isMobile) await page.getByRole('button', { name: 'Paneel tonen of verbergen' }).click();
+  await page.getByRole('button', { name: 'Instellingen', exact: true }).click();
   await page.getByLabel('Bekijk de campagne als').selectOption({ label: 'Lena' });
 
   await expect(page.getByText(/Alleen-lezen: je bekijkt de wereld als Lena/)).toBeVisible();

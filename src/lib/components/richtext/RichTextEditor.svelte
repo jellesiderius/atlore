@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import TextSurface from './TextSurface.svelte';
   import { searchNodes, fold } from '$lib/domain/search';
   import { findNodeTitleMatches, normalizeBody } from '$lib/domain/text';
   import type { MenuItem } from '$lib/components/ui/ContextMenu.svelte';
@@ -12,9 +13,12 @@
     types,
     placeholder = '',
     readonly = false,
+    compact = false,
+    surfaceLabel = '',
     ariaLabel = '',
     onChange,
     openNode,
+    previewNode,
     createNode,
     showContext,
     showNodeContext
@@ -24,9 +28,12 @@
     types: NodeType[];
     placeholder?: string;
     readonly?: boolean;
+    compact?: boolean;
+    surfaceLabel?: string;
     ariaLabel?: string;
     onChange?: (body: Paragraph[]) => void;
     openNode?: (id: string) => void;
+    previewNode?: (id: string | null, x?: number, y?: number, delay?: number) => void;
     createNode?: (title: string, insert: (id: string) => void) => void;
     showContext?: (x: number, y: number, items: MenuItem[]) => void;
     showNodeContext?: (id: string, x: number, y: number, items?: MenuItem[]) => void;
@@ -211,6 +218,32 @@
     }
   }
 
+  function preview(event: PointerEvent) {
+    const target =
+      event.target instanceof Element ? event.target.closest<HTMLElement>('[data-ref]') : null;
+    const id = target?.dataset.ref;
+    if (!target || !id || !nodes.some((node) => node.id === id && !node.trashedAt)) return;
+    const previous =
+      event.relatedTarget instanceof Element
+        ? event.relatedTarget.closest<HTMLElement>('[data-ref]')
+        : null;
+    if (previous === target) return;
+    const rect = target.getBoundingClientRect();
+    previewNode?.(id, rect.left - 12, rect.bottom + 8, 300);
+  }
+
+  function previewOut(event: PointerEvent) {
+    const target =
+      event.target instanceof Element ? event.target.closest<HTMLElement>('[data-ref]') : null;
+    if (!target) return;
+    const next =
+      event.relatedTarget instanceof Element
+        ? event.relatedTarget.closest<HTMLElement>('[data-ref]')
+        : null;
+    if (next === target) return;
+    previewNode?.(null);
+  }
+
   function contextmenu(event: MouseEvent) {
     if (!readonly && showContext) {
       const selection = selectionInfo();
@@ -392,7 +425,11 @@
   }
 </script>
 
-<div class="editor-wrap">
+<TextSurface
+  mode={readonly ? 'read' : 'write'}
+  label={surfaceLabel || t(readonly ? 'editor.readSurface' : 'editor.writeSurface')}
+  {compact}
+>
   <div
     bind:this={editor}
     class="editor"
@@ -406,9 +443,11 @@
     oninput={changed}
     onkeydown={keydown}
     onclick={clicked}
+    onpointerover={preview}
+    onpointerout={previewOut}
     oncontextmenu={contextmenu}
   ></div>
-</div>
+</TextSurface>
 {#if menu}
   <div class="mention-menu" style:left={`${menu.x}px`} style:top={`${menu.y}px`} role="listbox">
     {#each results as node, index}<button

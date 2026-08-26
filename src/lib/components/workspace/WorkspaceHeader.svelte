@@ -1,31 +1,18 @@
 <script lang="ts">
   import Icon from '$lib/components/ui/Icon.svelte';
-  import LanguageSwitcher from '$lib/components/ui/LanguageSwitcher.svelte';
   import { tooltip } from '$lib/actions/tooltip';
-  import type { Campaign, CampaignMember } from '$lib/types';
+  import type { Campaign } from '$lib/types';
   import { t } from '$lib/i18n/index.svelte';
   let {
     campaign,
     panelOpen,
     togglePanel,
-    exit,
-    theme,
-    toggleTheme,
-    members,
-    viewAs,
-    canViewAs,
-    changeView
+    exit
   }: {
     campaign: Campaign;
     panelOpen: boolean;
     togglePanel: () => void;
     exit: () => void;
-    theme: 'dark' | 'light';
-    toggleTheme: () => void;
-    members: CampaignMember[];
-    viewAs: CampaignMember | null;
-    canViewAs: boolean;
-    changeView: (userId: string | null) => void;
   } = $props();
 </script>
 
@@ -44,30 +31,6 @@
       ><small>{campaign.system}</small><b class="serif-title">{campaign.title}</b></span
     ></button
   >
-  <div class="header-actions">
-    {#if canViewAs}
-      <label class:viewing={viewAs} class="view-as">
-        <span>{t(viewAs ? 'workspace.viewingAs' : 'workspace.view')}</span>
-        <select
-          aria-label={t('workspace.viewAs')}
-          value={viewAs?.id ?? ''}
-          onchange={(event) => changeView(event.currentTarget.value || null)}
-        >
-          <option value="">{t('common.gameMaster')}</option>
-          {#each members.filter((member) => member.role === 'player') as member}
-            <option value={member.id}>{member.name}</option>
-          {/each}
-        </select>
-      </label>
-    {/if}
-    <LanguageSwitcher compact />
-    <button
-      class="theme"
-      onclick={toggleTheme}
-      aria-label={t('workspace.toggleTheme')}
-      use:tooltip={t('workspace.toggleTheme')}>{theme === 'dark' ? '☾' : '☀'}</button
-    ><span class="role">{t(campaign.role === 'gm' ? 'common.gameMaster' : 'common.player')}</span>
-  </div>
 </header>
 
 <style>
@@ -126,77 +89,9 @@
     text-overflow: ellipsis;
     font-weight: 400;
   }
-  .header-actions {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding-right: 12px;
-  }
-  .view-as {
-    height: 34px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 0 4px 0 8px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    color: var(--text-3);
-    background: var(--bg-2);
-  }
-  .view-as.viewing {
-    border-color: color-mix(in srgb, var(--ember) 55%, var(--line));
-    background: var(--ember-soft);
-  }
-  .view-as span {
-    font: 8px var(--font-mono);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .view-as select {
-    max-width: 110px;
-    border: 0;
-    outline: 0;
-    background: transparent;
-    color: var(--text-2);
-    font-size: 11px;
-  }
-  .theme {
-    width: 32px;
-    height: 32px;
-    border: 0;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--text-3);
-  }
-  .theme:hover {
-    background: var(--bg-3);
-    color: var(--text);
-  }
-  .role {
-    padding: 5px 8px;
-    border: 1px solid var(--line);
-    border-radius: 7px;
-    color: var(--text-3);
-    font: 9px var(--font-mono);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
   @media (max-width: 600px) {
     .campaign-title {
       max-width: calc(100% - 130px);
-    }
-    .header-actions .role {
-      display: none;
-    }
-    .header-actions :global(label.compact) {
-      display: none;
-    }
-    .view-as span {
-      display: none;
-    }
-    .view-as select {
-      max-width: 82px;
     }
   }
 </style>

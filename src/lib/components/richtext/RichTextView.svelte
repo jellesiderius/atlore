@@ -1,26 +1,53 @@
 <script lang="ts">
   import NodeChip from './NodeChip.svelte';
+  import TextSurface from './TextSurface.svelte';
   import type { NodeType, Paragraph, WorldNode } from '$lib/types';
+  import { t } from '$lib/i18n/index.svelte';
   let {
     body,
     nodes,
     types,
-    openNode
-  }: { body: Paragraph[]; nodes: WorldNode[]; types: NodeType[]; openNode?: (id: string) => void } =
-    $props();
+    openNode,
+    previewNode,
+    surface = 'default',
+    surfaceLabel = ''
+  }: {
+    body: Paragraph[];
+    nodes: WorldNode[];
+    types: NodeType[];
+    openNode?: (id: string) => void;
+    previewNode?: (id: string | null, x?: number, y?: number, delay?: number) => void;
+    surface?: 'default' | 'compact' | 'plain';
+    surfaceLabel?: string;
+  } = $props();
   let byId = $derived(new Map(nodes.map((node) => [node.id, node])));
   let typeByKey = $derived(new Map(types.map((type) => [type.key, type])));
 </script>
 
-<div class="rich-view">
-  {#each body as paragraph}<p>
-      {#each paragraph.segs as segment}{#if segment.t === 'txt'}{segment.v}{:else}{#if byId.get(segment.id)}<NodeChip
-              node={byId.get(segment.id)}
-              type={typeByKey.get(byId.get(segment.id)!.type)}
-              onclick={() => openNode?.(segment.id)}
-            />{:else}<NodeChip secret onclick={() => {}} />{/if}{/if}{/each}
-    </p>{/each}
-</div>
+{#snippet content()}
+  <div class="rich-view">
+    {#each body as paragraph}<p>
+        {#each paragraph.segs as segment}{#if segment.t === 'txt'}{segment.v}{:else}{#if byId.get(segment.id)}<NodeChip
+                node={byId.get(segment.id)}
+                type={typeByKey.get(byId.get(segment.id)!.type)}
+                {previewNode}
+                onclick={() => openNode?.(segment.id)}
+              />{:else}<NodeChip secret onclick={() => {}} />{/if}{/if}{/each}
+      </p>{/each}
+  </div>
+{/snippet}
+
+{#if surface === 'plain'}
+  {@render content()}
+{:else}
+  <TextSurface
+    mode="read"
+    label={surfaceLabel || t('editor.readSurface')}
+    compact={surface === 'compact'}
+  >
+    {@render content()}
+  </TextSurface>
+{/if}
 
 <style>
   .rich-view {

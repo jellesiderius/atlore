@@ -89,7 +89,7 @@
     <div class="spacer"></div>
     <div class="actions">
       <button class="open" onclick={open}
-        ><Icon name="session" size={14} />{t('common.open')}</button
+        ><Icon name="open" size={14} />{t('common.open')}</button
       >
       {#if canReveal}<button class:revealed={!node.revealed} onclick={toggleReveal}
           ><Icon name={node.revealed ? 'eye-off' : 'eye'} size={14} />{node.revealed
@@ -137,11 +137,10 @@
     object-fit: cover;
   }
   .meta-row {
-    min-height: 39px;
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 7px 8px 0 12px;
+    padding: 11px 12px 0;
     color: var(--text-3);
     font: 9.5px var(--font-mono);
     letter-spacing: 0.1em;

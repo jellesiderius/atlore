@@ -5,7 +5,7 @@
   import TrashManager from '$lib/components/workspace/TrashManager.svelte';
   import { searchNodes } from '$lib/domain/search';
   import type { ForceSettings } from '$lib/components/graph/GraphCanvas.svelte';
-  import type { NodeType, PanelName, SessionEntry, WorldNode } from '$lib/types';
+  import type { CampaignMember, NodeType, PanelName, SessionEntry, WorldNode } from '$lib/types';
   import { nodeTypeLabel, t } from '$lib/i18n/index.svelte';
   let {
     open,
@@ -17,11 +17,15 @@
     selected,
     settings,
     theme,
+    members,
+    viewAs,
+    canViewAs,
     canCreate,
     canManage,
     canPurge,
     onPanel,
     onNode,
+    onPreview,
     onContext,
     onNew,
     onRestore,
@@ -34,6 +38,7 @@
     onCampaignSettings,
     onReflow,
     onTheme,
+    onViewAs,
     onClose
   }: {
     open: boolean;
@@ -45,11 +50,15 @@
     selected: string | null;
     settings: ForceSettings;
     theme: 'dark' | 'light';
+    members: CampaignMember[];
+    viewAs: CampaignMember | null;
+    canViewAs: boolean;
     canCreate: boolean;
     canManage: boolean;
     canPurge: boolean;
     onPanel: (panel: PanelName) => void;
     onNode: (id: string) => void;
+    onPreview: (id: string | null, x?: number, y?: number, delay?: number) => void;
     onContext: (id: string, x: number, y: number) => void;
     onNew: () => void;
     onRestore: (id: string) => void;
@@ -68,6 +77,7 @@
     onCampaignSettings: () => void;
     onReflow: () => void;
     onTheme: () => void;
+    onViewAs: (userId: string | null) => void;
     onClose: () => void;
   } = $props();
   let query = $state('');
@@ -145,6 +155,11 @@
                     class:active={selected === node.id}
                     draggable="true"
                     ondragstart={(event) => drag(event, node.id)}
+                    onpointerenter={(event) => {
+                      const rect = event.currentTarget.getBoundingClientRect();
+                      onPreview(node.id, rect.right + 8, rect.top - 4, 160);
+                    }}
+                    onpointerleave={() => onPreview(null)}
                     onclick={() => onNode(node.id)}
                     oncontextmenu={(event) => {
                       event.preventDefault();
@@ -162,6 +177,11 @@
         {#each recent
           .map((id) => activeNodes.find((node) => node.id === id))
           .filter(Boolean) as node}<button
+            onpointerenter={(event) => {
+              const rect = event.currentTarget.getBoundingClientRect();
+              onPreview(node!.id, rect.right + 8, rect.top - 4, 160);
+            }}
+            onpointerleave={() => onPreview(null)}
             onclick={() => onNode(node!.id)}
             oncontextmenu={(event) => {
               event.preventDefault();
@@ -184,6 +204,11 @@
       />
       <div class="rows">
         {#each searchResults as node}<button
+            onpointerenter={(event) => {
+              const rect = event.currentTarget.getBoundingClientRect();
+              onPreview(node.id, rect.right + 8, rect.top - 4, 160);
+            }}
+            onpointerleave={() => onPreview(null)}
             onclick={() => onNode(node.id)}
             oncontextmenu={(event) => {
               event.preventDefault();
@@ -225,6 +250,17 @@
         >{t('explorer.reflow')}</button
       >
       <div class="eyebrow section-label">{t('explorer.display')}</div>
+      {#if canViewAs}<label class:viewing={viewAs} class="view-as"
+          ><span>{t(viewAs ? 'workspace.viewingAs' : 'workspace.view')}</span><select
+            aria-label={t('workspace.viewAs')}
+            value={viewAs?.id ?? ''}
+            onchange={(event) => onViewAs(event.currentTarget.value || null)}
+            ><option value="">{t('common.gameMaster')}</option
+            >{#each members.filter((member) => member.role === 'player') as member}<option
+                value={member.id}>{member.name}</option
+              >{/each}</select
+          ></label
+        >{/if}
       <button class="setting-row" onclick={onTheme}
         ><span>{t('explorer.lightTheme')}</span><span class:on={theme === 'light'} class="switch"
           ><i></i></span
@@ -447,6 +483,32 @@
     color: var(--text-2);
     font-size: 12px;
     margin-bottom: 4px;
+  }
+  .view-as {
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 5px;
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--text-2);
+    font-size: 11.5px;
+  }
+  .view-as.viewing {
+    border-color: color-mix(in srgb, var(--ember) 55%, var(--line));
+    background: var(--ember-soft);
+  }
+  .view-as select {
+    max-width: 125px;
+    min-height: 30px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--text-2);
+    font-size: 11px;
   }
   .switch {
     position: relative;

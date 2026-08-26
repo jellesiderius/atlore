@@ -21,6 +21,17 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(200)
 });
 
+export const accountUpdateSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  email: z.email().max(254),
+  color: z.string().regex(/^#[0-9a-f]{6}$/i)
+});
+
+export const passwordChangeSchema = z.object({
+  currentPassword: z.string().min(1).max(200),
+  newPassword: z.string().min(10).max(200)
+});
+
 export const forgotSchema = z.object({ email: z.email().max(254) });
 export const resetSchema = z.object({
   token: z.string().min(32).max(200),

@@ -1,5 +1,27 @@
 language:
   label: Language
+account:
+  open: Open account settings
+  title: Account settings
+  profile: Profile
+  preferences: Preferences
+  name: Name
+  email: Email address
+  color: Profile colour
+  save: Save account
+  saved: Account saved.
+  saveFailed: Saving the account failed.
+  password: Change password
+  currentPassword: Current password
+  newPassword: New password
+  repeatPassword: Repeat new password
+  savePassword: Save password
+  passwordSaved: Password changed. Other sessions have been signed out.
+  passwordFailed: Changing the password failed.
+  passwordMismatch: The new passwords do not match.
+  appearance: Appearance
+  dark: Dark
+  light: Light
 meta:
   description: Atlore — the shared knowledge graph for your tabletop campaign.
 common:
@@ -334,6 +356,8 @@ story:
 editor:
   placeholder: Start writing…
   ariaLabel: Text editor
+  writeSurface: Writing area
+  readSurface: Reading view
   secretNode: Secret node
   secret: secret
   openNode: Open {{title}}
@@ -431,6 +455,7 @@ server:
   tooManyLater: Too many attempts. Try again later.
   loginFailed: The email address or password is incorrect.
   accountExists: An account with this email address already exists.
+  currentPasswordWrong: The current password is incorrect.
   resetExpired: This recovery link has expired or has already been used.
   recoverySent: If this account exists, the recovery email is on its way.
   campaignNotFound: Campaign not found.

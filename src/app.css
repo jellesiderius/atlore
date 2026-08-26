@@ -125,31 +125,47 @@ a:hover {
   position: fixed;
   z-index: 140;
   max-width: min(260px, calc(100vw - 16px));
-  min-height: 28px;
-  display: flex;
-  align-items: center;
-  padding: 0 9px;
+  padding: 6px 10px;
   border: 1px solid var(--line-2);
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--bg-2) 96%, transparent);
-  color: var(--text-2);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.38);
-  backdrop-filter: blur(10px);
-  font: 10.5px var(--font-mono);
-  line-height: 1.25;
+  border-radius: 8px;
+  background: var(--bg-3);
+  color: var(--text);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+  font-size: 12.5px;
+  line-height: 1.2;
   white-space: nowrap;
   pointer-events: none;
   animation: tooltip-in 0.13s ease both;
+}
+.atlore-tooltip::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-left: 1px solid var(--line-2);
+  border-bottom: 1px solid var(--line-2);
+  border-radius: 1px;
+  background: var(--bg-3);
+  transform: translateY(-50%) rotate(45deg);
+}
+.atlore-tooltip.flip::before {
+  right: -4px;
+  left: auto;
+  border: 0;
+  border-top: 1px solid var(--line-2);
+  border-right: 1px solid var(--line-2);
 }
 
 @keyframes tooltip-in {
   from {
     opacity: 0;
-    transform: translateX(-4px);
+    transform: translate(-4px, -50%);
   }
   to {
     opacity: 1;
-    transform: none;
+    transform: translateY(-50%);
   }
 }
 

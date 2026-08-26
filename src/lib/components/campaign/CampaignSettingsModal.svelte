@@ -1,10 +1,12 @@
 <script lang="ts">
   import Modal from '$lib/components/ui/Modal.svelte';
   import { DEFAULT_RIGHTS, OPEN_RIGHTS, STRICT_RIGHTS } from '$lib/domain/constants';
-  import type { RightKey, Rights, WorkspaceSnapshot } from '$lib/types';
+  import type { CampaignSettingsTab, RightKey, Rights, WorkspaceSnapshot } from '$lib/types';
   import { t } from '$lib/i18n/index.svelte';
   let {
     snapshot,
+    tab = 'general',
+    onTab = () => undefined,
     close,
     save,
     invite,
@@ -13,6 +15,8 @@
     destroy
   }: {
     snapshot: WorkspaceSnapshot;
+    tab?: CampaignSettingsTab;
+    onTab?: (tab: CampaignSettingsTab) => void;
     close: () => void;
     save: (value: Record<string, unknown>) => Promise<void>;
     invite: (value: { email: string; name: string; role: 'gm' | 'player' }) => Promise<void>;
@@ -20,7 +24,6 @@
     remove: (id: string) => Promise<void>;
     destroy: () => Promise<void>;
   } = $props();
-  let tab = $state<'general' | 'members' | 'rights'>('general');
   // svelte-ignore state_referenced_locally -- modal form state is intentionally initialized once
   let title = $state(snapshot.campaign.title);
   // svelte-ignore state_referenced_locally -- modal form state is intentionally initialized once
@@ -28,7 +31,7 @@
   // svelte-ignore state_referenced_locally -- modal form state is intentionally initialized once
   let note = $state(snapshot.campaign.note);
   // svelte-ignore state_referenced_locally -- modal form state is intentionally initialized once
-  let rights = $state<Rights>(structuredClone(snapshot.campaign.rights));
+  let rights = $state<Rights>({ ...snapshot.campaign.rights });
   let email = $state('');
   let inviteName = $state('');
   let busy = $state(false);
@@ -88,7 +91,7 @@
     }
   }
   function preset(value: Rights) {
-    rights = structuredClone(value);
+    rights = { ...value };
   }
 </script>
 
@@ -96,7 +99,7 @@
   <div class="tabs">
     {#each [['general', 'campaign.settings.general'], ['members', 'campaign.settings.membersTab'], ['rights', 'campaign.settings.rightsTab']] as item}<button
         class:active={tab === item[0]}
-        onclick={() => (tab = item[0] as typeof tab)}>{t(item[1])}</button
+        onclick={() => onTab(item[0] as CampaignSettingsTab)}>{t(item[1])}</button
       >{/each}
   </div>
   {#if tab === 'general'}

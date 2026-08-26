@@ -1,22 +1,30 @@
 <script lang="ts">
-  import { goto, invalidateAll } from '$app/navigation';
+  import { goto, invalidateAll, pushState } from '$app/navigation';
+  import { onMount } from 'svelte';
+  import AccountMenu from '$lib/components/account/AccountMenu.svelte';
   import CampaignCard from '$lib/components/campaign/CampaignCard.svelte';
   import CampaignSettingsModal from '$lib/components/campaign/CampaignSettingsModal.svelte';
   import NewCampaignModal from '$lib/components/campaign/NewCampaignModal.svelte';
   import Starfield from '$lib/components/visual/Starfield.svelte';
-  import LanguageSwitcher from '$lib/components/ui/LanguageSwitcher.svelte';
   import { api } from '$lib/client/api';
   import { t } from '$lib/i18n/index.svelte';
-  import type { CampaignSummary, WorkspaceSnapshot } from '$lib/types';
-  let {
-    data
-  }: { data: { user: { id: string; name: string; color: string }; campaigns: CampaignSummary[] } } =
-    $props();
+  import type {
+    CampaignSettingsTab,
+    CampaignSummary,
+    SessionUser,
+    WorkspaceSnapshot
+  } from '$lib/types';
+  let { data }: { data: { user: SessionUser; campaigns: CampaignSummary[] } } = $props();
+  // svelte-ignore state_referenced_locally -- page data seeds the editable account card
+  let accountUser = $state({ ...data.user });
   // svelte-ignore state_referenced_locally -- page data seeds client-managed campaign state
   let campaigns = $state([...data.campaigns]);
   let showNew = $state(false);
   let settings = $state<WorkspaceSnapshot | null>(null);
+  let settingsTab = $state<CampaignSettingsTab>('general');
   let loadingSettings = $state(false);
+  let settingsRequest = 0;
+  const settingsTabs = new Set<CampaignSettingsTab>(['general', 'members', 'rights']);
   let gmCount = $derived(campaigns.filter((campaign) => campaign.role === 'gm').length);
   async function createCampaign(value: { title: string; system: string; note: string }) {
     const result = await api<{ id: string }>('/api/campaigns', {
@@ -25,13 +33,54 @@
     });
     await goto(`/campaigns/${result.id}`);
   }
-  async function openSettings(campaignId: string) {
+  onMount(() => {
+    const restore = () => void restoreSettingsUrl(new URL(location.href));
+    const restoreFromCache = (event: PageTransitionEvent) => event.persisted && restore();
+    window.addEventListener('popstate', restore);
+    window.addEventListener('pageshow', restoreFromCache);
+    restore();
+    return () => {
+      window.removeEventListener('popstate', restore);
+      window.removeEventListener('pageshow', restoreFromCache);
+    };
+  });
+  async function loadSettings(campaignId: string) {
+    if (settings?.campaign.id === campaignId) return;
+    const request = ++settingsRequest;
     loadingSettings = true;
     try {
-      settings = await api(`/api/campaigns/${campaignId}/workspace`);
+      const loaded = await api<WorkspaceSnapshot>(`/api/campaigns/${campaignId}/workspace`);
+      if (request === settingsRequest) settings = loaded;
     } finally {
-      loadingSettings = false;
+      if (request === settingsRequest) loadingSettings = false;
     }
+  }
+  async function restoreSettingsUrl(url: URL) {
+    const campaignId = url.searchParams.get('settings');
+    const requestedTab = url.searchParams.get('settingsTab') as CampaignSettingsTab | null;
+    settingsTab = requestedTab && settingsTabs.has(requestedTab) ? requestedTab : 'general';
+    if (!campaignId || !campaigns.some((campaign) => campaign.id === campaignId)) {
+      settingsRequest++;
+      loadingSettings = false;
+      settings = null;
+      return;
+    }
+    await loadSettings(campaignId);
+  }
+  function navigateSettings(campaignId: string | null, tab: CampaignSettingsTab = 'general') {
+    settingsTab = tab;
+    const url = new URL(location.href);
+    if (campaignId) {
+      url.searchParams.set('settings', campaignId);
+      if (tab === 'general') url.searchParams.delete('settingsTab');
+      else url.searchParams.set('settingsTab', tab);
+    } else {
+      url.searchParams.delete('settings');
+      url.searchParams.delete('settingsTab');
+    }
+    if (url.href !== location.href) pushState(url, {});
+    if (campaignId) void loadSettings(campaignId);
+    else settings = null;
   }
   async function refreshSettings() {
     if (!settings) return;
@@ -51,14 +100,27 @@
   <Starfield />
   <div class="vignette"></div>
   <div class="account">
-    <LanguageSwitcher compact />
-    <span style:border-color={data.user.color} style:color={data.user.color}
-      >{data.user.name.slice(0, 1).toUpperCase()}</span
-    ><button class="ghost-button" onclick={logout}>{t('campaigns.logout')}</button>
+    <AccountMenu
+      user={accountUser}
+      save={async (value) => {
+        const result = await api<{ user: SessionUser }>('/api/account', {
+          method: 'PATCH',
+          body: JSON.stringify(value)
+        });
+        accountUser = result.user;
+      }}
+      changePassword={async (value) => {
+        await api('/api/account/password', {
+          method: 'PATCH',
+          body: JSON.stringify(value)
+        });
+      }}
+      {logout}
+    />
   </div>
   <section class="welcome">
     <div class="eyebrow">Atlore</div>
-    <h1 class="serif-title">{t('campaigns.welcome')}<br /><em>{data.user.name}</em></h1>
+    <h1 class="serif-title">{t('campaigns.welcome')}<br /><em>{accountUser.name}</em></h1>
     <div class="divider-mark"><span></span></div>
     <p>
       {t('campaigns.summary', {
@@ -73,7 +135,7 @@
         {campaign}
         {index}
         open={() => goto(`/campaigns/${campaign.id}`)}
-        settings={() => openSettings(campaign.id)}
+        settings={() => navigateSettings(campaign.id)}
       />{/each}<button class="new-card" onclick={() => (showNew = true)}
       ><span><b>+</b></span><strong>{t('campaigns.new')}</strong><small
         >{t('campaigns.newNote')}</small
@@ -85,7 +147,9 @@
 {#if loadingSettings}<div class="loading" role="status">{t('campaigns.loadingSettings')}</div>{/if}
 {#if settings}<CampaignSettingsModal
     snapshot={settings}
-    close={() => (settings = null)}
+    tab={settingsTab}
+    onTab={(tab) => navigateSettings(settings!.campaign.id, tab)}
+    close={() => navigateSettings(null)}
     save={async (value) => {
       await api(`/api/campaigns/${settings!.campaign.id}`, {
         method: 'PATCH',
@@ -113,7 +177,7 @@
     }}
     destroy={async () => {
       await api(`/api/campaigns/${settings!.campaign.id}`, { method: 'DELETE' });
-      settings = null;
+      navigateSettings(null);
       campaigns = (await api<{ campaigns: CampaignSummary[] }>('/api/campaigns')).campaigns;
     }}
   />{/if}
@@ -150,21 +214,6 @@
     position: absolute;
     right: 12px;
     top: calc(12px + env(safe-area-inset-top));
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .account > span {
-    width: 30px;
-    height: 30px;
-    border: 1.5px solid;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-  }
-  .account .ghost-button {
-    min-height: 32px;
-    font-size: 12px;
   }
   .welcome {
     position: relative;

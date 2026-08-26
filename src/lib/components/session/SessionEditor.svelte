@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
   import Icon from '$lib/components/ui/Icon.svelte';
+  import { tooltip } from '$lib/actions/tooltip';
   import type { MenuItem } from '$lib/components/ui/ContextMenu.svelte';
   import RichTextEditor from '$lib/components/richtext/RichTextEditor.svelte';
   import { debounce } from '$lib/client/api';
@@ -30,6 +31,7 @@
     canDelete,
     canLink,
     openNode,
+    previewNode,
     createMention,
     pick,
     save,
@@ -55,6 +57,7 @@
     canDelete: boolean;
     canLink: boolean;
     openNode: (id: string) => void;
+    previewNode: (id: string | null, x?: number, y?: number, delay?: number) => void;
     createMention: (title: string, insert: (id: string) => void) => void;
     pick: (id: string) => void;
     save: (sessionId: string, value: Record<string, unknown>, keepalive?: boolean) => Promise<void>;
@@ -172,11 +175,13 @@
         >{/each}</select
     >{#if session && canHistory}<button
         class="icon-button"
-        title={t('session.history')}
+        aria-label={t('session.history')}
+        use:tooltip={t('session.history')}
         onclick={history}><Icon name="clock" size={16} /></button
       >{/if}{#if session && canDelete}<button
         class="icon-button trash"
-        title={t('session.trash')}
+        aria-label={t('session.trash')}
+        use:tooltip={t('session.trash')}
         onclick={trash}><Icon name="trash" size={16} /></button
       >{/if}<span>{saved}</span>{#if canStart}<button
         class="primary-button start"
@@ -207,6 +212,7 @@
           placeholder={t('session.editorPlaceholder')}
           onChange={bodyChanged}
           {openNode}
+          {previewNode}
           createNode={createMention}
           {showContext}
           {showNodeContext}
@@ -242,10 +248,12 @@
             body={scratchBody}
             {nodes}
             {types}
+            compact
             readonly={!canWrite}
             placeholder={t('session.privatePlaceholder')}
             onChange={notesChanged}
             {openNode}
+            {previewNode}
             createNode={createMention}
             {showContext}
             {showNodeContext}

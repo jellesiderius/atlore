@@ -65,6 +65,8 @@
   let introDelays = new Map<string, number>();
   let introStarted = 0;
   let camera = { x: 0, y: 0, z: 1 };
+  let cameraTarget: { x: number; y: number; z: number } | null = null;
+  let reducedMotion = false;
   let userMoved = false;
   let pointer: {
     id: number;
@@ -104,6 +106,7 @@
     })
   );
   onMount(() => {
+    reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
     context = canvas.getContext('2d')!;
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
@@ -191,6 +194,21 @@
   }
   function loop(timestamp: number) {
     let needsDraw = tickIntro(timestamp);
+    if (cameraTarget) {
+      const factor = reducedMotion ? 1 : 0.11;
+      camera.x += (cameraTarget.x - camera.x) * factor;
+      camera.y += (cameraTarget.y - camera.y) * factor;
+      camera.z += (cameraTarget.z - camera.z) * factor;
+      if (
+        Math.abs(cameraTarget.x - camera.x) < 0.4 &&
+        Math.abs(cameraTarget.y - camera.y) < 0.4 &&
+        Math.abs(cameraTarget.z - camera.z) < 0.0005
+      ) {
+        camera = { ...cameraTarget };
+        cameraTarget = null;
+      }
+      needsDraw = true;
+    }
     const draggedId = pointer?.nodeId && pointer.moved ? pointer.nodeId : null;
     const largeWorld = simulationNodes.length > 900;
     if (draggedId && !largeWorld) simulationAlpha = Math.max(simulationAlpha, 0.34);
@@ -262,8 +280,15 @@
         b = positions.get(link.targetId);
       if (!a || !b) continue;
       context.moveTo(a.x, a.y);
-      context.lineTo(b.x, b.y);
+      curveTo(a, b);
     }
+  }
+  function curveTo(a: { x: number; y: number }, b: { x: number; y: number }) {
+    const midpointX = (a.x + b.x) / 2;
+    const midpointY = (a.y + b.y) / 2;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    context.quadraticCurveTo(midpointX - dy * 0.07, midpointY + dx * 0.07, b.x, b.y);
   }
   function drawLinks(
     highlighted: Set<string> | null,
@@ -281,7 +306,7 @@
         const strong = focusId && (link.sourceId === focusId || link.targetId === focusId);
         context.beginPath();
         context.moveTo(a.x, a.y);
-        context.lineTo(b.x, b.y);
+        curveTo(a, b);
         context.strokeStyle = strong
           ? 'rgba(240,145,63,.88)'
           : lit
@@ -439,6 +464,7 @@
   }
   function down(event: PointerEvent) {
     if (event.button !== 0) return;
+    cameraTarget = null;
     finishIntro();
     canvas.setPointerCapture(event.pointerId);
     const rect = canvas.getBoundingClientRect(),
@@ -517,8 +543,14 @@
     pointer = null;
     requestDraw();
   }
+  function leave() {
+    if (pointer) return;
+    hover = null;
+    requestDraw();
+  }
   function wheel(event: WheelEvent) {
     event.preventDefault();
+    cameraTarget = null;
     const rect = canvas.getBoundingClientRect(),
       mx = event.clientX - rect.left,
       my = event.clientY - rect.top,
@@ -553,6 +585,7 @@
   }
   export function fitView() {
     if (!activeNodes.length || !width || !height) return;
+    cameraTarget = null;
     const values = activeNodes.map((node) => positions.get(node.id)).filter(Boolean) as {
       x: number;
       y: number;
@@ -598,9 +631,12 @@
   export function centerOn(id: string, minimumZoom = 1) {
     const position = positions.get(id);
     if (!position || !width || !height) return;
-    camera.z = Math.max(camera.z, minimumZoom);
-    camera.x = width / 2 - position.x * camera.z;
-    camera.y = height / 2 - position.y * camera.z;
+    const z = Math.max(camera.z, minimumZoom);
+    cameraTarget = {
+      z,
+      x: width / 2 - position.x * z,
+      y: height / 2 - position.y * z
+    };
     userMoved = true;
     requestDraw();
   }
@@ -775,6 +811,7 @@
   onpointermove={move}
   onpointerup={up}
   onpointercancel={up}
+  onpointerleave={leave}
   onwheel={wheel}
   ondblclick={doubleClick}
   oncontextmenu={contextmenu}

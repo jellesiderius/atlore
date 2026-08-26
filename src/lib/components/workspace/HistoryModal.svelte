@@ -3,17 +3,19 @@
   import Modal from '$lib/components/ui/Modal.svelte';
   import { bodyToText } from '$lib/domain/text';
   import { diffWords, type DiffPart } from '$lib/domain/diff';
-  import type { Paragraph, VersionEntry } from '$lib/types';
+  import type { Paragraph, VersionEntry, WorldNode } from '$lib/types';
   import { i18n, t } from '$lib/i18n/index.svelte';
   let {
     title,
     currentBody,
+    nodes,
     close,
     load,
     restore
   }: {
     title: string;
     currentBody: Paragraph[];
+    nodes: WorldNode[];
     close: () => void;
     load: () => Promise<VersionEntry[]>;
     restore: (id: string) => Promise<void>;
@@ -21,8 +23,11 @@
   let versions = $state<VersionEntry[]>([]);
   let selected = $state<VersionEntry | null>(null);
   let busy = $state(true);
+  let titles = $derived(new Map(nodes.map((node) => [node.id, node.title])));
+  const bodyText = (body: Paragraph[]) =>
+    bodyToText(body, (id) => titles.get(id) ?? `✦ ${t('editor.secret')}`);
   let diff = $derived<DiffPart[] | null>(
-    selected ? diffWords(bodyToText(selected.snapshot.body), bodyToText(currentBody)) : []
+    selected ? diffWords(bodyText(selected.snapshot.body), bodyText(currentBody)) : []
   );
   onMount(async () => {
     try {

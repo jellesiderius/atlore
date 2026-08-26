@@ -2,6 +2,14 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 
 type TestWorld = { campaignId: string; heroId: string; placeId: string };
 
+async function waitForWorkspace(page: Page) {
+  const canvas = page.getByLabel('Interactieve kennisgraaf');
+  await expect(canvas).toBeVisible();
+  await expect
+    .poll(() => canvas.evaluate((element: HTMLCanvasElement) => element.width > 300))
+    .toBe(true);
+}
+
 async function createWorld(page: Page, withMap = false): Promise<TestWorld> {
   await page.goto('/auth/login');
   await page.getByPlaceholder('E-mailadres').fill('demo@atlore.app');
@@ -147,6 +155,7 @@ test('alle graph-, explorer- en tekstacties uit het contextmenu werken', async (
 
   try {
     await page.goto(`/campaigns/${world.campaignId}`);
+    await waitForWorkspace(page);
     const explorer = page.getByLabel('Explorer');
     const hero = explorer.getByRole('button', { name: 'Contextheld', exact: true });
     await expect(hero).toBeVisible();
@@ -294,10 +303,9 @@ test('atlasmarker gebruikt het volledige nodemenu en de kaartacties werken', asy
 
   try {
     await page.goto(`/campaigns/${world.campaignId}`);
+    await waitForWorkspace(page);
     await page.getByRole('button', { name: 'Kaart', exact: true }).click();
-    const marker = page
-      .getByRole('button', { name: 'Contextheld', description: 'Contextheld', exact: true })
-      .filter({ visible: true });
+    const marker = page.locator('.marker[aria-label="Contextheld"]');
     await expect(marker).toBeVisible();
 
     await marker.click({ button: 'right' });

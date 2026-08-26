@@ -32,9 +32,13 @@ export function tooltip(node: HTMLElement, options: TooltipOptions) {
     const anchor = node.getBoundingClientRect();
     const tip = layer.getBoundingClientRect();
     let left = anchor.right + 9;
-    if (left + tip.width > innerWidth - 8) left = anchor.left - tip.width - 9;
-    let top = anchor.top + anchor.height / 2 - tip.height / 2;
-    top = Math.max(8, Math.min(innerHeight - tip.height - 8, top));
+    const flipped = left + tip.width > innerWidth - 8;
+    if (flipped) left = anchor.left - tip.width - 9;
+    const top = Math.max(
+      tip.height / 2 + 8,
+      Math.min(innerHeight - tip.height / 2 - 8, anchor.top + anchor.height / 2)
+    );
+    layer.classList.toggle('flip', flipped);
     layer.style.left = `${Math.round(left)}px`;
     layer.style.top = `${Math.round(top)}px`;
   }

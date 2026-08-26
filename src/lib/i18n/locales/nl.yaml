@@ -1,5 +1,27 @@
 language:
   label: Taal
+account:
+  open: Accountinstellingen openen
+  title: Accountinstellingen
+  profile: Profiel
+  preferences: Voorkeuren
+  name: Naam
+  email: E-mailadres
+  color: Profielkleur
+  save: Account opslaan
+  saved: Account opgeslagen.
+  saveFailed: Account opslaan is mislukt.
+  password: Wachtwoord wijzigen
+  currentPassword: Huidig wachtwoord
+  newPassword: Nieuw wachtwoord
+  repeatPassword: Herhaal nieuw wachtwoord
+  savePassword: Wachtwoord opslaan
+  passwordSaved: Wachtwoord gewijzigd. Andere sessies zijn uitgelogd.
+  passwordFailed: Wachtwoord wijzigen is mislukt.
+  passwordMismatch: De nieuwe wachtwoorden zijn niet gelijk.
+  appearance: Weergave
+  dark: Donker
+  light: Licht
 meta:
   description: Atlore — de gedeelde kennisgraaf voor je tabletop-campagne.
 common:
@@ -334,6 +356,8 @@ story:
 editor:
   placeholder: Begin te schrijven…
   ariaLabel: Teksteditor
+  writeSurface: Schrijfvlak
+  readSurface: Leesweergave
   secretNode: Geheime node
   secret: geheim
   openNode: '{{title}} openen'
@@ -431,6 +455,7 @@ server:
   tooManyLater: Te veel pogingen. Probeer het later opnieuw.
   loginFailed: E-mailadres of wachtwoord klopt niet.
   accountExists: Er bestaat al een account met dit e-mailadres.
+  currentPasswordWrong: Het huidige wachtwoord klopt niet.
   resetExpired: Deze herstellink is verlopen of al gebruikt.
   recoverySent: Als dit account bestaat, is de herstelmail onderweg.
   campaignNotFound: Campagne niet gevonden.

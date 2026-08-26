@@ -5,6 +5,7 @@
   import GraphCanvas, { type ForceSettings } from '$lib/components/graph/GraphCanvas.svelte';
   import GraphToolbar from '$lib/components/graph/GraphToolbar.svelte';
   import NodePopover from '$lib/components/graph/NodePopover.svelte';
+  import NodePreview from '$lib/components/graph/NodePreview.svelte';
   import AtlasMap from '$lib/components/map/AtlasMap.svelte';
   import ConnectionModal from '$lib/components/node/ConnectionModal.svelte';
   import CreateNodeModal from '$lib/components/node/CreateNodeModal.svelte';
@@ -25,6 +26,8 @@
   import { t } from '$lib/i18n/index.svelte';
   import type {
     MediaAsset,
+    CampaignSettingsTab,
+    NodeDossierTab,
     Paragraph,
     PanelName,
     SessionEntry,
@@ -38,15 +41,21 @@
   let snapshot = $state(data.snapshot);
   let view = $state<ViewName>('graph');
   let panel = $state<PanelName>('explorer');
+  let nodeTab = $state<NodeDossierTab>('overview');
   let panelOpen = $state(typeof window === 'undefined' ? true : innerWidth >= 860);
   let selected = $state<string | null>(null);
   let popover = $state<string | null>(null);
+  let previewId = $state<string | null>(null);
+  let previewAnchor = $state({ x: 0, y: 0 });
+  let previewShowTimer: ReturnType<typeof setTimeout>;
+  let previewHideTimer: ReturnType<typeof setTimeout>;
   let popoverAnchor = $state({
     x: typeof window === 'undefined' ? 720 : innerWidth / 2,
     y: typeof window === 'undefined' ? 450 : innerHeight / 2
   });
   let dossier = $state<string | null>(null);
   let recent = $state<string[]>([]);
+  let explorerTap: { id: string; at: number } | null = null;
   // svelte-ignore state_referenced_locally -- initial selection is recalculated after mutations
   let sessionId = $state(snapshot.sessions.find((item) => !item.trashedAt)?.id ?? '');
   let createState = $state<{
@@ -58,7 +67,7 @@
   let connectId = $state<string | null>(null);
   let context = $state<{ x: number; y: number; items: MenuItem[] } | null>(null);
   let palette = $state(false);
-  let campaignSettings = $state(false);
+  let campaignSettings = $state<CampaignSettingsTab | null>(null);
   let sessionCreate = $state(false);
   let newSessionTitle = $state('');
   let newSessionDate = $state('');
@@ -81,6 +90,7 @@
   let refreshQueued = false;
   let nodeMap = $derived(new Map(snapshot.nodes.map((node) => [node.id, node])));
   let popoverNode = $derived(popover ? nodeMap.get(popover) : undefined);
+  let previewNodeEntry = $derived(previewId ? nodeMap.get(previewId) : undefined);
   let dossierNode = $derived(dossier ? nodeMap.get(dossier) : undefined);
   let currentSession = $derived(
     snapshot.sessions.find((session) => session.id === sessionId) ?? null
@@ -92,6 +102,9 @@
   );
   let typeMap = $derived(new Map(snapshot.nodeTypes.map((type) => [type.key, type])));
   const workspaceViews = new Set<ViewName>(['graph', 'session', 'story', 'atlas']);
+  const workspacePanels = new Set<PanelName>(['explorer', 'recent', 'search', 'settings']);
+  const dossierTabs = new Set<NodeDossierTab>(['overview', 'map', 'game', 'relations', 'story']);
+  const campaignSettingsTabs = new Set<CampaignSettingsTab>(['general', 'members', 'rights']);
   onMount(() => {
     const stored = localStorage.getItem('atlore-theme');
     theme = stored === 'light' ? 'light' : 'dark';
@@ -166,6 +179,8 @@
       window.removeEventListener('popstate', restore);
       window.removeEventListener('pageshow', restoreFromCache);
       window.removeEventListener('pagehide', suspendRealtime);
+      clearTimeout(previewShowTimer);
+      clearTimeout(previewHideTimer);
       suspendRealtime();
     };
   });
@@ -186,6 +201,9 @@
   function restoreWorkspaceUrl(url: URL) {
     const requestedView = url.searchParams.get('view') as ViewName | null;
     view = requestedView && workspaceViews.has(requestedView) ? requestedView : 'graph';
+    const requestedPanel = url.searchParams.get('panel') as PanelName | null;
+    panel = requestedPanel && workspacePanels.has(requestedPanel) ? requestedPanel : 'explorer';
+    if (requestedPanel && workspacePanels.has(requestedPanel)) panelOpen = true;
     const requestedSession = url.searchParams.get('session');
     if (requestedSession && snapshot.sessions.some((item) => item.id === requestedSession))
       sessionId = requestedSession;
@@ -196,6 +214,18 @@
       requestedNode && snapshot.nodes.some((item) => item.id === requestedNode && !item.trashedAt)
         ? requestedNode
         : null;
+    const requestedNodeTab = url.searchParams.get('nodeTab') as NodeDossierTab | null;
+    nodeTab =
+      dossier && requestedNodeTab && dossierTabs.has(requestedNodeTab)
+        ? requestedNodeTab
+        : 'overview';
+    const requestedSettingsTab = url.searchParams.get(
+      'campaignSettings'
+    ) as CampaignSettingsTab | null;
+    campaignSettings =
+      requestedSettingsTab && campaignSettingsTabs.has(requestedSettingsTab)
+        ? requestedSettingsTab
+        : null;
     if (dossier) {
       selected = dossier;
       remember(dossier);
@@ -204,37 +234,80 @@
     context = null;
   }
   function navigateWorkspace(
-    next: { view?: ViewName; sessionId?: string; dossier?: string | null },
+    next: {
+      view?: ViewName;
+      panel?: PanelName;
+      sessionId?: string;
+      dossier?: string | null;
+      nodeTab?: NodeDossierTab;
+      campaignSettings?: CampaignSettingsTab | null;
+    },
     replace = false
   ) {
     if (next.view) view = next.view;
+    if (next.panel) panel = next.panel;
     if (next.sessionId !== undefined) sessionId = next.sessionId;
-    if (next.dossier !== undefined) dossier = next.dossier;
+    if (next.dossier !== undefined) {
+      if (dossier !== next.dossier) nodeTab = 'overview';
+      dossier = next.dossier;
+    }
+    if (next.nodeTab) nodeTab = next.nodeTab;
+    if (next.campaignSettings !== undefined) campaignSettings = next.campaignSettings;
     popover = null;
     context = null;
     const url = new URL(location.href);
     if (view === 'graph') url.searchParams.delete('view');
     else url.searchParams.set('view', view);
+    if (panel === 'explorer') url.searchParams.delete('panel');
+    else url.searchParams.set('panel', panel);
     if (sessionId) url.searchParams.set('session', sessionId);
     else url.searchParams.delete('session');
     if (dossier) url.searchParams.set('node', dossier);
     else url.searchParams.delete('node');
+    if (dossier && nodeTab !== 'overview') url.searchParams.set('nodeTab', nodeTab);
+    else url.searchParams.delete('nodeTab');
+    if (campaignSettings) url.searchParams.set('campaignSettings', campaignSettings);
+    else url.searchParams.delete('campaignSettings');
     if (url.href === location.href) return;
     if (replace) replaceState(url, {});
     else pushState(url, {});
   }
   function openNode(id: string) {
+    dismissPreview();
     selected = id;
     remember(id);
     palette = false;
     if (innerWidth < 860) panelOpen = false;
     navigateWorkspace({ dossier: id });
   }
+  function previewNode(id: string | null, x = 0, y = 0, delay = 300) {
+    clearTimeout(previewShowTimer);
+    if (!id) {
+      previewHideTimer = setTimeout(() => (previewId = null), 220);
+      return;
+    }
+    if (matchMedia('(hover: none)').matches || popover || dossier) return;
+    clearTimeout(previewHideTimer);
+    if (previewId === id) return;
+    previewShowTimer = setTimeout(() => {
+      previewAnchor = { x, y };
+      previewId = id;
+    }, delay);
+  }
+  function keepPreview() {
+    clearTimeout(previewHideTimer);
+  }
+  function dismissPreview() {
+    clearTimeout(previewShowTimer);
+    clearTimeout(previewHideTimer);
+    previewId = null;
+  }
   function selectNode(id: string | null) {
     selected = id;
     if (id) remember(id);
   }
   function graphSelect(id: string | null, clientX?: number, clientY?: number) {
+    dismissPreview();
     selectNode(id);
     popover = id;
     if (id)
@@ -242,6 +315,17 @@
         x: clientX ?? innerWidth / 2,
         y: clientY ?? innerHeight / 2
       };
+  }
+  function explorerSelect(id: string) {
+    dismissPreview();
+    popover = null;
+    const now = performance.now();
+    const openDossier = explorerTap?.id === id && now - explorerTap.at < 1200;
+    explorerTap = openDossier ? null : { id, at: now };
+    selectNode(id);
+    if (view === 'graph') graph?.centerOn(id, 1);
+    if (innerWidth < 860) panelOpen = false;
+    if (openDossier) openNode(id);
   }
   function notify(text: string, action?: Toast['action']) {
     const id = createClientId();
@@ -509,11 +593,13 @@
     selected = null;
     popover = null;
     dossier = null;
+    nodeTab = 'overview';
     context = null;
     const url = new URL(location.href);
     if (userId) url.searchParams.set('viewAs', userId);
     else url.searchParams.delete('viewAs');
     url.searchParams.delete('node');
+    url.searchParams.delete('nodeTab');
     replaceState(url, {});
     notify(
       userId
@@ -539,12 +625,6 @@
     {panelOpen}
     togglePanel={() => (panelOpen = !panelOpen)}
     exit={() => goto('/campaigns')}
-    {theme}
-    {toggleTheme}
-    members={snapshot.members}
-    viewAs={snapshot.viewAs}
-    canViewAs={snapshot.canViewAs}
-    {changeView}
   />
   <div class="workspace-body">
     <NavigationRail
@@ -562,15 +642,15 @@
       {selected}
       settings={forceSettings}
       {theme}
+      members={snapshot.members}
+      viewAs={snapshot.viewAs}
+      canViewAs={snapshot.canViewAs}
       canCreate={can('create')}
       canManage={can('settings')}
       canPurge={snapshot.campaign.role === 'gm'}
-      onPanel={(next) => (panel = next)}
-      onNode={(id) => {
-        if (view === 'graph') graphSelect(id);
-        else selectNode(id);
-        if (innerWidth < 860) panelOpen = false;
-      }}
+      onPanel={(next) => navigateWorkspace({ panel: next })}
+      onNode={explorerSelect}
+      onPreview={previewNode}
       onContext={showNodeContext}
       onNew={() => (createState = { title: '', x: 0, y: 0 })}
       onRestore={(id) => patchNode(id, { trashed: false })}
@@ -593,9 +673,10 @@
       onAddType={addNodeType}
       onRemoveType={removeNodeType}
       onForceSettings={(value) => (forceSettings = value)}
-      onCampaignSettings={() => (campaignSettings = true)}
+      onCampaignSettings={() => navigateWorkspace({ campaignSettings: 'general' })}
       onReflow={() => graph?.reflow()}
       onTheme={toggleTheme}
+      onViewAs={changeView}
       onClose={() => (panelOpen = false)}
     />
     <section class="stage">
@@ -650,6 +731,7 @@
             canDelete={can('delete')}
             canLink={can('link')}
             {openNode}
+            {previewNode}
             createMention={mentionCreate}
             pick={(id) => navigateWorkspace({ view: 'session', sessionId: id, dossier: null })}
             save={async (sessionId, value, keepalive = false) => {
@@ -737,6 +819,7 @@
           types={snapshot.nodeTypes}
           currentUserName={snapshot.currentUser.name}
           {openNode}
+          {previewNode}
           openSession={(id) => {
             navigateWorkspace({ view: 'session', sessionId: id, dossier: null });
           }}
@@ -751,6 +834,7 @@
           {uploadMain}
           pinNode={patchNode}
           {openNode}
+          {previewNode}
           {showNodeContext}
         />{/if}
       {#if dossierNode}{#key dossierNode.id}<NodeDossier
@@ -763,6 +847,8 @@
             posts={snapshot.posts}
             media={snapshot.media}
             currentUserId={snapshot.currentUser.id}
+            tab={nodeTab}
+            onTab={(next) => navigateWorkspace({ nodeTab: next })}
             canEdit={can('edit')}
             canImage={can('image')}
             canReveal={can('reveal')}
@@ -770,6 +856,7 @@
             canHistory={can('history')}
             close={() => navigateWorkspace({ dossier: null })}
             {openNode}
+            {previewNode}
             openSession={(id) => {
               navigateWorkspace({ view: 'session', sessionId: id, dossier: null });
             }}
@@ -804,6 +891,15 @@
     </section>
   </div>
 </main>
+{#if previewNodeEntry && !popoverNode && !dossierNode}<NodePreview
+    node={previewNodeEntry}
+    type={typeMap.get(previewNodeEntry.type)}
+    media={snapshot.media}
+    anchor={previewAnchor}
+    open={() => openNode(previewNodeEntry!.id)}
+    keep={keepPreview}
+    leave={() => previewNode(null)}
+  />{/if}
 {#if createState}<CreateNodeModal
     initialTitle={createState.title}
     initialX={createState.x}
@@ -836,7 +932,9 @@
   />{/if}
 {#if campaignSettings}<CampaignSettingsModal
     {snapshot}
-    close={() => (campaignSettings = false)}
+    tab={campaignSettings}
+    onTab={(next) => navigateWorkspace({ campaignSettings: next })}
+    close={() => navigateWorkspace({ campaignSettings: null })}
     save={saveCampaign}
     invite={async (value) => {
       await api(`/api/campaigns/${snapshot.campaign.id}/invite`, {
@@ -888,6 +986,7 @@
 {#if history}<HistoryModal
     title={history.title}
     currentBody={history.body}
+    nodes={snapshot.nodes}
     close={() => (history = null)}
     load={loadVersions}
     restore={async (id) => {

@@ -45,12 +45,23 @@ async function removeWorkspace(page: Page, campaignId: string) {
   }, campaignId);
 }
 
+async function waitForWorkspace(page: Page) {
+  await expect(page.getByLabel('Interactieve kennisgraaf')).toBeVisible();
+  await page.waitForFunction(() => {
+    const canvas = document.querySelector<HTMLCanvasElement>(
+      'canvas[aria-label="Interactieve kennisgraaf"]'
+    );
+    return Boolean(canvas && canvas.width > 300 && canvas.height > 200);
+  });
+}
+
 test('sessietekst slaat ook bij direct wisselen op en blijft lokaal actueel', async ({ page }) => {
   const workspace = await createWorkspace(page);
   const story = `De groep betreedt de verzonken bibliotheek ${Date.now()}.`;
 
   try {
     await page.goto(`/campaigns/${workspace.campaignId}`);
+    await waitForWorkspace(page);
     await page.getByRole('button', { name: 'Sessie', exact: true }).click();
     const editor = page.getByRole('textbox', { name: 'Teksteditor' }).first();
     await expect(editor).toBeVisible();
@@ -110,6 +121,7 @@ test('werkruimte, sessie en dossier werken met browser back, forward en URL-hers
 
   try {
     await page.goto(`/campaigns/${workspace.campaignId}`);
+    await waitForWorkspace(page);
     await page.getByRole('button', { name: 'Sessie', exact: true }).click();
     await expect(page).toHaveURL(/view=session/);
     await expect(page).toHaveURL(new RegExp(`session=${workspace.sessionId}`));
@@ -141,6 +153,61 @@ test('werkruimte, sessie en dossier werken met browser back, forward en URL-hers
     await page.goto('/campaigns');
     await page.goBack();
     await expect(page.getByLabel('Nodenaam')).toHaveValue('Navigatieheld');
+  } finally {
+    await removeWorkspace(page, workspace.campaignId);
+  }
+});
+
+test('paneel-, dossier- en campagne-instellingentabs herstellen via URL en browserhistorie', async ({
+  page
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name.includes('mobile'),
+    'De dossieropening gebruikt een muiscontextmenu.'
+  );
+  const workspace = await createWorkspace(page);
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+
+  try {
+    await page.goto(`/campaigns/${workspace.campaignId}`);
+    await waitForWorkspace(page);
+    await page.getByRole('button', { name: 'Instellingen', exact: true }).click();
+    await expect(page).toHaveURL(/panel=settings/);
+    await page.getByRole('button', { name: 'Campagne-instellingen', exact: true }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page).toHaveURL(/campaignSettings=general/);
+
+    await page.getByRole('button', { name: 'Wie speelt mee', exact: true }).click();
+    await expect(page).toHaveURL(/campaignSettings=members/);
+    await expect(page.getByRole('button', { name: 'Wie speelt mee', exact: true })).toHaveClass(
+      /active/
+    );
+
+    await page.goBack();
+    await expect(page).toHaveURL(/campaignSettings=general/);
+    await expect(page.getByLabel('Naam', { exact: true })).toBeVisible();
+    await page.goBack();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page).toHaveURL(/panel=settings/);
+    await page.goBack();
+    await expect(page).not.toHaveURL(/panel=/);
+
+    const node = page
+      .getByLabel('Explorer')
+      .getByRole('button', { name: 'Navigatieheld', exact: true });
+    await node.click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'Openen' }).click();
+    await page.getByRole('button', { name: 'Spel', exact: true }).click();
+    await expect(page).toHaveURL(/nodeTab=game/);
+    await expect(page.getByText('Statistieken', { exact: true })).toBeVisible();
+
+    await page.goBack();
+    await expect(page).not.toHaveURL(/nodeTab=/);
+    await expect(page.getByText('Jouw beschrijving', { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByText('Jouw beschrijving', { exact: true })).toBeVisible();
+    expect(pageErrors).toEqual([]);
   } finally {
     await removeWorkspace(page, workspace.campaignId);
   }

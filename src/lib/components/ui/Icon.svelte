@@ -44,6 +44,8 @@
       cy="16"
       r="2"
     />
+  {:else if name === 'edit'}
+    <path d="M4 20h4l11-11-4-4L4 16v4zM13.5 6.5l4 4M12 20h8" />
   {:else if name === 'panel'}
     <rect x="3.5" y="4.5" width="17" height="15" rx="2" /><path d="M9.5 4.5v15" />
   {:else if name === 'back'}

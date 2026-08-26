@@ -21,7 +21,7 @@ test('een drag beweegt de volledige verbonden node-swarm', async ({ page }, test
     const prototype = CanvasRenderingContext2D.prototype;
     const originalClearRect = prototype.clearRect;
     const originalMoveTo = prototype.moveTo;
-    const originalLineTo = prototype.lineTo;
+    const originalQuadraticCurveTo = prototype.quadraticCurveTo;
     const originalArc = prototype.arc;
     let lineStart: { x: number; y: number } | null = null;
     let seenNodes = new Set<string>();
@@ -39,7 +39,7 @@ test('een drag beweegt de volledige verbonden node-swarm', async ({ page }, test
         lineStart = { x, y };
       return originalMoveTo.call(this, x, y);
     };
-    prototype.lineTo = function (x, y) {
+    prototype.quadraticCurveTo = function (controlX, controlY, x, y) {
       if (
         this.canvas.getAttribute('aria-label') === 'Interactieve kennisgraaf' &&
         lineStart &&
@@ -47,7 +47,7 @@ test('een drag beweegt de volledige verbonden node-swarm', async ({ page }, test
       ) {
         window.__atloreGraphFrame.links.push({ x1: lineStart.x, y1: lineStart.y, x2: x, y2: y });
       }
-      return originalLineTo.call(this, x, y);
+      return originalQuadraticCurveTo.call(this, controlX, controlY, x, y);
     };
     prototype.arc = function (x, y, radius, startAngle, endAngle, counterclockwise) {
       if (

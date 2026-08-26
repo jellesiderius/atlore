@@ -10,6 +10,7 @@
   import { searchNodes } from '$lib/domain/search';
   import type {
     CampaignMember,
+    NodeDossierTab,
     MediaAsset,
     NodePost,
     NodeType,
@@ -30,6 +31,8 @@
     posts,
     media,
     currentUserId,
+    tab = 'overview',
+    onTab = () => undefined,
     canEdit,
     canImage,
     canReveal,
@@ -37,6 +40,7 @@
     canHistory,
     close,
     openNode,
+    previewNode,
     openSession,
     saveNode,
     saveDescription,
@@ -58,6 +62,8 @@
     posts: NodePost[];
     media: MediaAsset[];
     currentUserId: string;
+    tab?: NodeDossierTab;
+    onTab?: (tab: NodeDossierTab) => void;
     canEdit: boolean;
     canImage: boolean;
     canReveal: boolean;
@@ -65,6 +71,7 @@
     canHistory: boolean;
     close: () => void;
     openNode: (id: string) => void;
+    previewNode: (id: string | null, x?: number, y?: number, delay?: number) => void;
     openSession: (id: string) => void;
     saveNode: (value: Record<string, unknown>) => Promise<void>;
     saveDescription: (body: Paragraph[], shared: boolean) => Promise<void>;
@@ -83,7 +90,6 @@
     showContext: (x: number, y: number, items: MenuItem[]) => void;
     showNodeContext: (id: string, x: number, y: number, items?: MenuItem[]) => void;
   } = $props();
-  let tab = $state<'overview' | 'map' | 'game' | 'relations' | 'story'>('overview');
   // svelte-ignore state_referenced_locally -- the keyed dossier owns its edit buffer
   let title = $state(node.title);
   // svelte-ignore state_referenced_locally -- the keyed dossier owns its edit buffer
@@ -213,7 +219,7 @@
   <nav>
     {#each [['overview', 'node.overview'], ...(PLACE_TYPES.has(node.type) ? [['map', 'node.map']] : []), ['game', 'node.game'], ['relations', 'node.relations'], ['story', 'node.story']] as item}<button
         class:active={tab === item[0]}
-        onclick={() => (tab = item[0] as typeof tab)}>{t(item[1])}</button
+        onclick={() => onTab(item[0] as NodeDossierTab)}>{t(item[1])}</button
       >{/each}
   </nav>
   <div class="content">
@@ -304,6 +310,7 @@
         placeholder={t('node.descriptionPlaceholder')}
         onChange={saveBody}
         {openNode}
+        {previewNode}
         createNode={createMention}
         {showContext}
         {showNodeContext}
@@ -315,6 +322,8 @@
                 body={description.body}
                 {nodes}
                 {types}
+                surface="compact"
+                {previewNode}
                 {openNode}
               />
             </article>{/each}
@@ -447,6 +456,8 @@
                 .slice(0, 2)}
               {nodes}
               {types}
+              surface="plain"
+              {previewNode}
               {openNode}
             /></button
           >{/each}{#if !mentions.length}<p>{t('node.notInStory')}</p>{/if}
@@ -493,6 +504,7 @@
   .dossier > nav {
     height: 42px;
     display: flex;
+    justify-content: center;
     gap: 2px;
     padding: 5px 13px;
     border-bottom: 1px solid var(--line);

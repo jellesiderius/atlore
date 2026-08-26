@@ -9,6 +9,7 @@
     types,
     currentUserName,
     openNode,
+    previewNode,
     openSession
   }: {
     sessions: SessionEntry[];
@@ -17,6 +18,7 @@
     types: NodeType[];
     currentUserName: string;
     openNode: (id: string) => void;
+    previewNode: (id: string | null, x?: number, y?: number, delay?: number) => void;
     openSession: (id: string) => void;
   } = $props();
   let scratchMap = $derived(new Map(scratch.map((item) => [item.sessionId, item])));
@@ -39,12 +41,15 @@
           body={session.body}
           {nodes}
           {types}
+          {previewNode}
           {openNode}
         />{#if scratchMap.has(session.id)}<details>
             <summary>{t('story.privateNotes', { name: currentUserName })}</summary><RichTextView
               body={scratchMap.get(session.id)?.body ?? []}
               {nodes}
               {types}
+              {previewNode}
+              surface="compact"
               {openNode}
             />
           </details>{/if}
