@@ -10,7 +10,11 @@ test('productieshell levert manifest zonder router- of socketwaarschuwingen', as
   await expect(manifestResponse.json()).resolves.toMatchObject({
     name: 'Atlore',
     start_url: '/',
-    scope: '/'
+    scope: '/',
+    icons: [
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { src: '/brand/atlore-mark.png', sizes: '512x512', type: 'image/png' }
+    ]
   });
 
   const messages: string[] = [];
@@ -19,9 +23,14 @@ test('productieshell levert manifest zonder router- of socketwaarschuwingen', as
     if (['warning', 'error'].includes(message.type())) messages.push(message.text());
   });
   await page.goto('/auth/login');
+  await expect(page.locator('link[rel="icon"][href$="/favicon.ico"]')).toHaveCount(1);
+  const authLogo = page.getByRole('img', { name: 'Atlore' });
+  await expect(authLogo).toBeVisible();
+  await expect(authLogo).toHaveJSProperty('complete', true);
   await page.getByPlaceholder('E-mailadres').fill('demo@atlore.app');
   await page.getByPlaceholder('Wachtwoord').fill('AtloreDemo!2026');
   await page.getByRole('button', { name: 'Inloggen' }).click();
+  await expect(page.getByRole('img', { name: 'Atlore' })).toBeVisible();
   await page.getByText('Ember & Rust', { exact: true }).first().click();
   await expect(page.locator('main.workspace')).toHaveAttribute('data-realtime', 'connected');
 

@@ -5,6 +5,7 @@
   import CampaignCard from '$lib/components/campaign/CampaignCard.svelte';
   import CampaignSettingsModal from '$lib/components/campaign/CampaignSettingsModal.svelte';
   import NewCampaignModal from '$lib/components/campaign/NewCampaignModal.svelte';
+  import BrandLogo from '$lib/components/ui/BrandLogo.svelte';
   import Starfield from '$lib/components/visual/Starfield.svelte';
   import { api } from '$lib/client/api';
   import { t } from '$lib/i18n/index.svelte';
@@ -119,7 +120,7 @@
     />
   </div>
   <section class="welcome">
-    <div class="eyebrow">Atlore</div>
+    <div class="brand"><BrandLogo eager /></div>
     <h1 class="serif-title">{t('campaigns.welcome')}<br /><em>{accountUser.name}</em></h1>
     <div class="divider-mark"><span></span></div>
     <p>
@@ -221,9 +222,11 @@
     max-width: 540px;
     text-align: center;
   }
-  .welcome > .eyebrow {
-    letter-spacing: 0.24em;
-    margin-bottom: 14px;
+  .welcome > .brand {
+    --brand-logo-width: 360px;
+    display: flex;
+    justify-content: center;
+    margin: 0 auto 15px;
   }
   .welcome h1 {
     margin: 0;
@@ -315,6 +318,10 @@
     }
     .welcome h1 {
       font-size: 40px;
+    }
+    .welcome > .brand {
+      --brand-logo-width: 310px;
+      margin: 0 auto 12px;
     }
     .cards {
       flex-direction: column;

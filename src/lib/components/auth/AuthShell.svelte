@@ -1,15 +1,14 @@
 <script lang="ts">
   import Starfield from '$lib/components/visual/Starfield.svelte';
+  import BrandLogo from '$lib/components/ui/BrandLogo.svelte';
   import LanguageSwitcher from '$lib/components/ui/LanguageSwitcher.svelte';
   let {
     heading,
     subheading,
-    eyebrow = 'Atlore',
     children
   }: {
     heading: string;
     subheading: string;
-    eyebrow?: string;
     children: import('svelte').Snippet;
   } = $props();
 </script>
@@ -20,7 +19,7 @@
   <div class="language"><LanguageSwitcher compact /></div>
   <section>
     <header>
-      <div class="eyebrow">{eyebrow}</div>
+      <div class="brand"><BrandLogo eager /></div>
       <h1 class="serif-title">{heading}</h1>
       <p>{subheading}</p>
       <div class="divider-mark"><span></span></div>
@@ -71,9 +70,11 @@
     text-align: center;
     margin-bottom: 22px;
   }
-  .eyebrow {
-    margin-bottom: 12px;
-    letter-spacing: 0.24em;
+  .brand {
+    --brand-logo-width: 310px;
+    display: flex;
+    justify-content: center;
+    margin: 0 0 14px;
   }
   h1 {
     font-size: 40px;
@@ -96,7 +97,11 @@
   @media (max-width: 500px) {
     .auth-shell {
       align-items: start;
-      padding-top: max(16vh, 80px);
+      padding-top: max(8vh, 64px);
+    }
+    .brand {
+      --brand-logo-width: 290px;
+      margin: 0 auto 12px;
     }
     h1 {
       font-size: 36px;

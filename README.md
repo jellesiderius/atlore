@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./static/brand/atlore-wide.png" alt="Atlore — open-source tabletop RPG campaign manager" width="760" />
+</p>
+
 # Atlore
 
 Atlore is an open-source, realtime tabletop RPG campaign manager and collaborative worldbuilding knowledge graph. Designed for Dungeons & Dragons (D&D) and other TTRPGs, it combines an Obsidian-style graph view, `@`-linked session notes, interactive maps, and multiplayer worldbuilding tools. The application preserves the supplied Claude prototype's visual language in both dark and light mode.
