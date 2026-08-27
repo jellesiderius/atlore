@@ -57,6 +57,7 @@ Open `http://localhost:5173`. PostgreSQL is exposed on port `55432`, Redis on `6
 | `ORIGIN`            | Exact public origin, including scheme and optional port.             |
 | `TRUSTED_ORIGINS`   | Additional comma-separated preview or proxy origins.                 |
 | `APP_PORT`          | Host port for the Docker application.                                |
+| `HOST_BIND_ADDRESS` | Interface for Docker-published ports; defaults to local-only.        |
 | `DATABASE_URL`      | PostgreSQL connection used by local scripts outside Docker.          |
 | `POSTGRES_PASSWORD` | Password used by the Docker PostgreSQL service.                      |
 | `REDIS_URL`         | Redis connection used outside Docker.                                |
@@ -67,6 +68,7 @@ Open `http://localhost:5173`. PostgreSQL is exposed on port `55432`, Redis on `6
 | `S3_*`              | S3-compatible endpoint, region, bucket, and credentials.             |
 | `SMTP_*`            | Email delivery for invitations and password recovery.                |
 | `LOG_LEVEL`         | Application logging level.                                           |
+| `CLOUDFLARED_*`     | Optional connector token and transport for Cloudflare Tunnel.        |
 
 See [`.env.example`](https://github.com/jellesiderius/atlore/blob/main/.env.example) for every supported setting.
 
@@ -83,6 +85,8 @@ See [`.env.example`](https://github.com/jellesiderius/atlore/blob/main/.env.exam
 9. Back up PostgreSQL and object storage regularly.
 10. Run all quality checks before deployment.
 
+For a public deployment without opening an inbound origin port, follow [Cloudflare Tunnel](https://github.com/jellesiderius/atlore/wiki/Cloudflare-Tunnel). The included profile routes only Atlore and keeps Docker-published ports bound to `127.0.0.1` by default.
+
 ## Operations
 
 ```bash
@@ -92,6 +96,8 @@ make restart    # restart the complete stack
 make stop       # stop without removing containers
 make down       # remove containers, preserve volumes
 make db-shell   # open PostgreSQL
+make tunnel-up   # start the stack and optional public tunnel
+make tunnel-down # stop only the public tunnel
 ```
 
 The health endpoint at `/api/health` reports application, PostgreSQL, and Redis status.

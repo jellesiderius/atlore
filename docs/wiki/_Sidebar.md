@@ -9,6 +9,7 @@
 - [Maps and Media](https://github.com/jellesiderius/atlore/wiki/Maps-and-Media)
 - [Account and Preferences](https://github.com/jellesiderius/atlore/wiki/Account-and-Preferences)
 - [Self-hosting and Configuration](https://github.com/jellesiderius/atlore/wiki/Self-hosting-and-Configuration)
+- [Cloudflare Tunnel](https://github.com/jellesiderius/atlore/wiki/Cloudflare-Tunnel)
 - [Troubleshooting](https://github.com/jellesiderius/atlore/wiki/Troubleshooting)
 
 ---

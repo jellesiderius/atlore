@@ -49,6 +49,11 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Validate Docker deployment profiles
+        run: |
+          docker compose config --quiet
+          docker compose --profile tunnel config --quiet
+          CLOUDFLARED_TUNNEL_TOKEN=ci-configuration-token ORIGIN=https://atlore.example.com ./scripts/check-cloudflare-tunnel.sh
       - run: npx playwright install --with-deps chromium
       - run: npm run db:migrate
       - run: npm run db:seed

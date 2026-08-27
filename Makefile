@@ -1,10 +1,10 @@
 .DEFAULT_GOAL := help
 COMPOSE := docker compose
 
-.PHONY: help install infra dev up launch down stop restart logs status build migrate seed seed-10k test test-10k e2e check publish-wiki shell db-shell clean destroy
+.PHONY: help install infra dev up launch down stop restart logs status tunnel-check tunnel-up tunnel-down tunnel-restart tunnel-logs tunnel-status build migrate seed seed-10k test test-10k e2e check publish-wiki shell db-shell clean destroy
 
 help: ## Toon alle commando's
-	@awk 'BEGIN {FS = ":.*## "; printf "Atlore commando’s:\n\n"} /^[a-zA-Z_-]+:.*## / { printf "  %-13s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*## "; printf "Atlore commando’s:\n\n"} /^[a-zA-Z_-]+:.*## / { printf "  %-16s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
 install: ## Installeer npm-afhankelijkheden
 	npm install
@@ -34,6 +34,24 @@ logs: ## Volg de app-logs
 
 status: ## Toon containerstatus en healthchecks
 	$(COMPOSE) ps
+
+tunnel-check: ## Controleer de Cloudflare Tunnel-configuratie
+	./scripts/check-cloudflare-tunnel.sh
+
+tunnel-up: tunnel-check ## Start de productiestack met Cloudflare Tunnel
+	$(COMPOSE) --profile tunnel up -d --build
+
+tunnel-down: ## Stop alleen de publieke Cloudflare Tunnel
+	$(COMPOSE) --profile tunnel stop cloudflared
+
+tunnel-restart: tunnel-check ## Herstart alleen de Cloudflare Tunnel
+	$(COMPOSE) --profile tunnel up -d --force-recreate cloudflared
+
+tunnel-logs: ## Volg de Cloudflare Tunnel-logs
+	$(COMPOSE) --profile tunnel logs -f --tail=150 cloudflared
+
+tunnel-status: ## Toon de status van Atlore en Cloudflare Tunnel
+	$(COMPOSE) --profile tunnel ps app cloudflared
 
 build: ## Maak een productiebuild
 	npm run build

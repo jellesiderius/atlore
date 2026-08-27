@@ -176,6 +176,8 @@ make down       # stop containers while preserving data
 make restart    # restart the stack
 make logs       # follow application logs
 make status     # show health and container status
+make tunnel-up   # start Atlore with the optional Cloudflare Tunnel
+make tunnel-down # stop only the public tunnel
 make seed       # load idempotent demo data
 make seed-10k   # create a 10,000-node performance world
 make check      # type checking, linting, and unit tests
@@ -198,7 +200,7 @@ Start with the **[Getting Started guide](https://github.com/jellesiderius/atlore
 - sessions, `@` mentions, notes, and realtime collaboration;
 - maps, media uploads, markers, and drag-and-drop;
 - account preferences, themes, languages, and passwords;
-- self-hosting, environment configuration, backups, and troubleshooting.
+- self-hosting, Cloudflare Tunnel, environment configuration, backups, and troubleshooting.
 
 ---
 
@@ -259,6 +261,30 @@ For a public deployment:
 - back up PostgreSQL and object storage regularly.
 
 Without S3 configuration, Atlore falls back to `STORAGE_PATH`. Without Redis, one application process remains functional, but horizontal realtime synchronization requires Redis.
+
+<details>
+<summary><strong>Cloudflare Tunnel</strong></summary>
+
+Atlore includes an optional Docker Compose profile for a remotely-managed Cloudflare Tunnel. Create a named tunnel and published application in Cloudflare, route its public hostname to `http://app:3000`, and set these values in `.env`:
+
+```dotenv
+ORIGIN=https://atlore.example.com
+CLOUDFLARED_TUNNEL_TOKEN=your-connector-token
+HOST_BIND_ADDRESS=127.0.0.1
+```
+
+Then start and inspect it with:
+
+```bash
+make tunnel-check
+make tunnel-up
+make tunnel-status
+make tunnel-logs
+```
+
+The same HTTPS hostname carries normal requests and realtime WebSockets. No database, Redis, MinIO, or inbound origin port is published to the internet. See the complete **[Cloudflare Tunnel guide](https://github.com/jellesiderius/atlore/wiki/Cloudflare-Tunnel)** for dashboard setup, security, operations, and troubleshooting.
+
+</details>
 
 <details>
 <summary><strong>Database and migrations</strong></summary>

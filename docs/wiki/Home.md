@@ -20,8 +20,9 @@ Welcome to the Atlore documentation. Atlore is a realtime tabletop RPG campaign 
 ### I want to run my own Atlore server
 
 1. Follow [Self-hosting and Configuration](https://github.com/jellesiderius/atlore/wiki/Self-hosting-and-Configuration).
-2. Keep [Troubleshooting](https://github.com/jellesiderius/atlore/wiki/Troubleshooting) nearby.
-3. Read the repository's [Contributing guide](https://github.com/jellesiderius/atlore/blob/main/CONTRIBUTING.md) before changing the code.
+2. Publish it securely with the optional [Cloudflare Tunnel](https://github.com/jellesiderius/atlore/wiki/Cloudflare-Tunnel).
+3. Keep [Troubleshooting](https://github.com/jellesiderius/atlore/wiki/Troubleshooting) nearby.
+4. Read the repository's [Contributing guide](https://github.com/jellesiderius/atlore/blob/main/CONTRIBUTING.md) before changing the code.
 
 ## Main concepts
 
