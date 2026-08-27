@@ -6,6 +6,7 @@
   import CampaignSettingsModal from '$lib/components/campaign/CampaignSettingsModal.svelte';
   import NewCampaignModal from '$lib/components/campaign/NewCampaignModal.svelte';
   import BrandLogo from '$lib/components/ui/BrandLogo.svelte';
+  import BuildStamp from '$lib/components/ui/BuildStamp.svelte';
   import Starfield from '$lib/components/visual/Starfield.svelte';
   import { api } from '$lib/client/api';
   import { t } from '$lib/i18n/index.svelte';
@@ -143,6 +144,7 @@
       ></button
     >
   </section>
+  <BuildStamp />
 </main>
 {#if showNew}<NewCampaignModal close={() => (showNew = false)} create={createCampaign} />{/if}
 {#if loadingSettings}<div class="loading" role="status">{t('campaigns.loadingSettings')}</div>{/if}

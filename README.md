@@ -285,6 +285,8 @@ make tunnel-logs
 
 The same HTTPS hostname carries normal requests and realtime WebSockets. No database, Redis, MinIO, or inbound origin port is published to the internet. See the complete **[Cloudflare Tunnel guide](https://github.com/jellesiderius/atlore/wiki/Cloudflare-Tunnel)** for dashboard setup, security, operations, and troubleshooting.
 
+After pulling application changes, run `make tunnel-up` again. `npm run build` only produces local SvelteKit artifacts and does not replace the Docker container served by the tunnel. A small identifier such as `v1.0.0.abcdef0` on the auth and campaign overview screens shows the deployed version and source commit.
+
 </details>
 
 <details>

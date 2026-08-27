@@ -116,11 +116,23 @@ Test restoring backups regularly; a backup that has never been restored is not y
 
 ## Updating Atlore
 
+For the regular Docker stack:
+
 ```bash
 git pull --ff-only
 make up
 make status
 ```
+
+When the Cloudflare Tunnel profile is enabled, rebuild and recreate the application with:
+
+```bash
+git pull --ff-only
+make tunnel-up
+make tunnel-status
+```
+
+`npm run build` only creates local SvelteKit build artifacts; it does not replace the running Docker container. The auth and campaign overview screens show the deployed identifier in the form `v1.0.0.abcdef0`, making it easy to confirm which commit Cloudflare is serving.
 
 Review release notes and create backups before applying migrations in production.
 

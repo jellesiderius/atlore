@@ -1,6 +1,7 @@
 <script lang="ts">
   import Starfield from '$lib/components/visual/Starfield.svelte';
   import BrandLogo from '$lib/components/ui/BrandLogo.svelte';
+  import BuildStamp from '$lib/components/ui/BuildStamp.svelte';
   import LanguageSwitcher from '$lib/components/ui/LanguageSwitcher.svelte';
   let {
     heading,
@@ -26,6 +27,7 @@
     </header>
     <div class="form-wrap">{@render children()}</div>
   </section>
+  <BuildStamp />
 </main>
 
 <style>

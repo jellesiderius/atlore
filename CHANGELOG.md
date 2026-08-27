@@ -12,11 +12,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Mobile two-finger pinch zoom for the knowledge graph.
 - Mobile tap previews for nodes pinned to an atlas map.
 - English as the initial interface language while retaining per-account language preferences.
+- A small version and source-commit identifier on auth and campaign overview screens.
 
 ### Changed
 
 - Docker-published application, PostgreSQL, Redis, and MinIO ports bind to `127.0.0.1` by default.
 - Node editors exclude the node being edited from `@` mention suggestions and automatic self-linking.
+- Production Make targets embed the current Git commit in rebuilt Docker images so tunnel deployments can be verified visually.
 
 ## [1.0.0] - 2026-08-27
 

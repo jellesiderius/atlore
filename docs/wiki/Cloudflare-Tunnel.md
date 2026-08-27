@@ -150,6 +150,16 @@ No separate public route is required for `/realtime`. The browser connects over 
 
 When restarting the only connector, active WebSocket connections briefly disconnect and the client reconnects automatically. For stricter availability requirements, run redundant connectors on separate hosts and plan database/object-storage availability separately.
 
+## Deploying an updated build
+
+```bash
+git pull --ff-only
+make tunnel-up
+make tunnel-status
+```
+
+Use `make tunnel-up`, not only `npm run build`: the public hostname points to the Docker application service, so the application image and container must be rebuilt. The small build identifier on the auth and campaign overview screens confirms the version and source commit currently served through the tunnel.
+
 ## Troubleshooting
 
 ### `403: Invalid request origin`

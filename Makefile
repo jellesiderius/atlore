@@ -1,6 +1,7 @@
 .DEFAULT_GOAL := help
 COMPOSE := docker compose
 PRERELEASE ?= false
+SOURCE_COMMIT ?= $(shell git rev-parse --short=7 HEAD 2>/dev/null || printf "unknown")
 
 .PHONY: help install infra dev up launch down stop restart logs status tunnel-check tunnel-up tunnel-down tunnel-restart tunnel-logs tunnel-status build migrate seed seed-10k test test-10k e2e check publish-wiki release shell db-shell clean destroy
 
@@ -17,7 +18,7 @@ dev: infra migrate ## Start the local Vite development server
 	npm run dev
 
 up: ## Build and start the complete production stack
-	$(COMPOSE) up -d --build
+	SOURCE_COMMIT=$(SOURCE_COMMIT) $(COMPOSE) up -d --build
 
 launch: up ## Alias for up
 
@@ -40,7 +41,7 @@ tunnel-check: ## Validate the Cloudflare Tunnel configuration
 	./scripts/check-cloudflare-tunnel.sh
 
 tunnel-up: tunnel-check ## Start the production stack with Cloudflare Tunnel
-	$(COMPOSE) --profile tunnel up -d --build
+	SOURCE_COMMIT=$(SOURCE_COMMIT) $(COMPOSE) --profile tunnel up -d --build
 
 tunnel-down: ## Stop only the public Cloudflare Tunnel
 	$(COMPOSE) --profile tunnel stop cloudflared

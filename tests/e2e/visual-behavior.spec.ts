@@ -80,6 +80,18 @@ test('light mode gebruikt een warm en volledig leesbaar kleurenpalet', async ({ 
   expect(contrast.muted).toBeGreaterThanOrEqual(4.5);
 });
 
+test('the auth and campaign screens expose the deployed build identifier', async ({ page }) => {
+  await page.goto('/auth/login');
+  const buildPattern = /^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?\.(?:[0-9a-f]{7,12}|dev|unknown)$/;
+  await expect(page.getByTestId('build-stamp')).toHaveText(buildPattern);
+
+  await page.getByPlaceholder('E-mailadres').fill('demo@atlore.app');
+  await page.getByPlaceholder('Wachtwoord').fill('AtloreDemo!2026');
+  await page.getByRole('button', { name: 'Inloggen' }).click();
+  await expect(page).toHaveURL(/\/campaigns$/);
+  await expect(page.getByTestId('build-stamp')).toHaveText(buildPattern);
+});
+
 test('het graph-stippenraster blijft zichtbaar bij elk zoomniveau', async ({ page }) => {
   await page.addInitScript(() => {
     Object.assign(window, {

@@ -10,6 +10,8 @@ ENV REALTIME_SECRET=build-only-realtime-secret-at-least-32-characters
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci
 COPY . .
+ARG SOURCE_COMMIT=unknown
+ENV SOURCE_COMMIT=$SOURCE_COMMIT
 RUN npm run build
 
 FROM node:24.18-alpine3.24 AS runner

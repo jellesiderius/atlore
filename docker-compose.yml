@@ -85,6 +85,8 @@ services:
     build:
       context: .
       target: builder
+      args:
+        SOURCE_COMMIT: ${SOURCE_COMMIT:-unknown}
     command: npm run db:migrate
     environment:
       DATABASE_URL: postgres://atlore:${POSTGRES_PASSWORD:-atlore}@postgres:5432/atlore
@@ -98,6 +100,8 @@ services:
     build:
       context: .
       target: runner
+      args:
+        SOURCE_COMMIT: ${SOURCE_COMMIT:-unknown}
     restart: unless-stopped
     init: true
     environment:
