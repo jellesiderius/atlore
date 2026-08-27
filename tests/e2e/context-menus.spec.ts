@@ -308,6 +308,33 @@ test('atlasmarker gebruikt het volledige nodemenu en de kaartacties werken', asy
     const marker = page.locator('.marker[aria-label="Contextheld"]');
     await expect(marker).toBeVisible();
 
+    await marker.hover();
+    await expect(page.getByRole('dialog', { name: 'Details van Contextheld' })).toBeVisible();
+    const markerBounds = await marker.boundingBox();
+    expect(markerBounds).not.toBeNull();
+    if (!markerBounds) return;
+    const beforeDrag = await workspaceNode(page, world.campaignId, world.heroId);
+    await page.mouse.move(
+      markerBounds.x + markerBounds.width / 2,
+      markerBounds.y + markerBounds.height / 2
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      markerBounds.x + markerBounds.width / 2 + 45,
+      markerBounds.y + markerBounds.height / 2 + 25,
+      { steps: 5 }
+    );
+    await expect(page.getByRole('dialog', { name: 'Details van Contextheld' })).toHaveCount(0);
+    await page.mouse.up();
+    await expect(page.getByRole('dialog', { name: 'Details van Contextheld' })).toHaveCount(0);
+    await expect(page.getByLabel('Nodenaam')).toHaveCount(0);
+    await expect
+      .poll(async () => {
+        const moved = await workspaceNode(page, world.campaignId, world.heroId);
+        return Math.hypot(moved.pinX - beforeDrag.pinX, moved.pinY - beforeDrag.pinY);
+      })
+      .toBeGreaterThan(0.01);
+
     await marker.click({ button: 'right' });
     let menu = page.getByRole('menu');
     await expect(menu.getByRole('menuitem', { name: 'Openen' })).toBeVisible();

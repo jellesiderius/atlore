@@ -26,7 +26,7 @@
     z-index: 12;
     right: 12px;
     top: 12px;
-    display: flex;
+    display: none;
     align-items: center;
     gap: 4px;
     padding: 4px;
@@ -64,6 +64,7 @@
   }
   @media (max-width: 600px) {
     .toolbar {
+      display: flex;
       right: 8px;
       top: 8px;
     }

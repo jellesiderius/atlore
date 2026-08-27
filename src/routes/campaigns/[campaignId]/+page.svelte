@@ -1246,6 +1246,7 @@
           pinNode={patchNode}
           {openNode}
           {previewNode}
+          {dismissPreview}
           {showNodeContext}
         />{/if}
       {#if dossierNode}{#key dossierNode.id}<NodeDossier

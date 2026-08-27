@@ -16,6 +16,7 @@
     pinNode,
     openNode,
     previewNode,
+    dismissPreview,
     showNodeContext
   }: {
     campaign: Campaign;
@@ -28,6 +29,7 @@
     pinNode: (id: string, value: Record<string, unknown>) => Promise<void>;
     openNode: (id: string) => void;
     previewNode: (id: string | null, x?: number, y?: number, delay?: number) => void;
+    dismissPreview: () => void;
     showNodeContext: (id: string, x: number, y: number, items?: MenuItem[]) => void;
   } = $props();
   let mapKey = $state<string>('campaign');
@@ -35,7 +37,14 @@
   let panX = $state(0);
   let panY = $state(0);
   let dragging = $state<{ x: number; y: number; panX: number; panY: number } | null>(null);
-  let moving = $state<string | null>(null);
+  let moving = $state<{
+    id: string;
+    pointerId: number;
+    startX: number;
+    startY: number;
+    moved: boolean;
+  } | null>(null);
+  let lastDragged = $state<{ id: string; at: number } | null>(null);
   let stage = $state<HTMLDivElement>();
   let busy = $state(false);
   let uploadError = $state('');
@@ -95,28 +104,34 @@
       panX = dragging.panX + event.clientX - dragging.x;
       panY = dragging.panY + event.clientY - dragging.y;
     }
-    if (moving) {
+    if (moving?.pointerId === event.pointerId) {
+      if (Math.hypot(event.clientX - moving.startX, event.clientY - moving.startY) > 4)
+        moving.moved = true;
+      if (!moving.moved) return;
       if (!stage) return;
       const rect = stage.getBoundingClientRect();
       const x = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
       const y = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
-      const node = nodes.find((item) => item.id === moving);
+      const node = nodes.find((item) => item.id === moving?.id);
       if (node) {
         node.pinX = x;
         node.pinY = y;
       }
     }
   }
-  async function up() {
-    if (moving) {
-      const node = nodes.find((item) => item.id === moving);
-      if (node)
+  async function up(event: PointerEvent) {
+    if (moving?.pointerId === event.pointerId) {
+      const finished = moving;
+      moving = null;
+      const node = nodes.find((item) => item.id === finished.id);
+      if (node && finished.moved) {
+        lastDragged = { id: finished.id, at: performance.now() };
         await pinNode(node.id, {
           pinX: node.pinX,
           pinY: node.pinY,
           pinMapId: mapKey === 'campaign' ? null : mapKey
         });
-      moving = null;
+      }
     }
     dragging = null;
   }
@@ -211,6 +226,7 @@
             style:--marker-color={typeMap.get(node.type)?.colorDark}
             aria-label={node.title}
             onpointerenter={(event) => {
+              if (moving) return;
               const rect = event.currentTarget.getBoundingClientRect();
               previewNode(node.id, rect.right + 8, rect.top - 4, 160);
             }}
@@ -218,13 +234,30 @@
             onpointerdown={(event) => {
               event.stopPropagation();
               if (event.button !== 0) return;
-              if (canPin && !node.markerLocked) moving = node.id;
+              dismissPreview();
+              if (canPin && !node.markerLocked) {
+                event.currentTarget.setPointerCapture(event.pointerId);
+                moving = {
+                  id: node.id,
+                  pointerId: event.pointerId,
+                  startX: event.clientX,
+                  startY: event.clientY,
+                  moved: false
+                };
+              }
             }}
-            ondblclick={() => openNode(node.id)}
+            ondblclick={(event) => {
+              if (lastDragged?.id === node.id && performance.now() - lastDragged.at < 700) {
+                event.preventDefault();
+                return;
+              }
+              openNode(node.id);
+            }}
             oncontextmenu={(event) => {
               event.preventDefault();
               event.stopPropagation();
               moving = null;
+              dismissPreview();
               showNodeContext(
                 node.id,
                 event.clientX,

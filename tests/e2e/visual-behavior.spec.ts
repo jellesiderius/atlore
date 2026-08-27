@@ -117,6 +117,14 @@ test('het graph-stippenraster blijft zichtbaar bij elk zoomniveau', async ({ pag
   expect(dots.every((dot: { color: string }) => dot.color === '#ffffff')).toBe(true);
 });
 
+test('de graph-toolbar is alleen op mobiel zichtbaar', async ({ page }, testInfo) => {
+  await openDemoCampaign(page);
+  const toolbar = page.locator('section.stage > .toolbar');
+
+  if (testInfo.project.name.includes('mobile')) await expect(toolbar).toBeVisible();
+  else await expect(toolbar).toBeHidden();
+});
+
 test('verborgen nodes hebben de ghoststijl uit het prototype', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name.includes('mobile'), 'De Explorer is op mobiel ingeklapt.');
   await page.addInitScript(() => {
