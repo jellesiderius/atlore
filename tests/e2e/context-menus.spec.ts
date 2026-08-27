@@ -366,3 +366,26 @@ test('atlasmarker gebruikt het volledige nodemenu en de kaartacties werken', asy
     await removeWorld(page, world.campaignId);
   }
 });
+
+test('een mobiele tap op een atlasmarker opent de node-layover', async ({ page }, testInfo) => {
+  test.setTimeout(60_000);
+  test.skip(!testInfo.project.name.includes('mobile'), 'Dit gedrag geldt alleen voor mobiel.');
+  const world = await createWorld(page, true);
+
+  try {
+    await page.goto(`/campaigns/${world.campaignId}`);
+    await waitForWorkspace(page);
+    await page.getByRole('button', { name: 'Kaart', exact: true }).click();
+    const marker = page.locator('.marker[aria-label="Contextheld"]');
+    await expect(marker).toBeVisible();
+
+    await marker.tap();
+    const preview = page.getByRole('dialog', { name: 'Details van Contextheld' });
+    await expect(preview).toBeVisible();
+    await expect(preview).toContainText('Contextheld');
+    await preview.getByRole('button', { name: 'Openen' }).tap();
+    await expect(page.getByLabel('Nodenaam')).toHaveValue('Contextheld');
+  } finally {
+    await removeWorld(page, world.campaignId);
+  }
+});

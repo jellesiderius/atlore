@@ -382,6 +382,7 @@
         body={!dirtyDescription && liveBody ? liveBody : descriptionBody}
         {nodes}
         {types}
+        excludeNodeId={node.id}
         readonly={!canEdit}
         placeholder={t('node.descriptionPlaceholder')}
         onChange={descriptionChanged}
@@ -411,6 +412,7 @@
           body={noteBody}
           {nodes}
           {types}
+          excludeNodeId={node.id}
           compact
           readonly={!canWrite}
           placeholder={t('node.privatePlaceholder')}

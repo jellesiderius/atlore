@@ -125,6 +125,64 @@ test('de graph-toolbar is alleen op mobiel zichtbaar', async ({ page }, testInfo
   else await expect(toolbar).toBeHidden();
 });
 
+test('de mobiele graph zoomt vloeiend in en uit met een pinch', async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.includes('mobile'), 'Dit gedrag geldt alleen voor mobiel.');
+  await page.addInitScript(() => {
+    Object.assign(window, { __atloreGraphZoom: [] as number[] });
+    const prototype = CanvasRenderingContext2D.prototype;
+    const originalScale = prototype.scale;
+    prototype.scale = function (x, y) {
+      if (this.canvas.getAttribute('aria-label') === 'Interactieve kennisgraaf')
+        (window as any).__atloreGraphZoom.push(x);
+      return originalScale.call(this, x, y);
+    };
+  });
+  await openDemoCampaign(page);
+  const canvas = page.getByLabel('Interactieve kennisgraaf');
+  await page.waitForFunction(() => (window as any).__atloreGraphZoom?.length > 0);
+  await page.waitForTimeout(400);
+  const bounds = await canvas.boundingBox();
+  expect(bounds).not.toBeNull();
+  if (!bounds) return;
+
+  const centerX = bounds.x + bounds.width / 2;
+  const centerY = bounds.y + bounds.height / 2;
+  const zoom = () => page.evaluate(() => (window as any).__atloreGraphZoom.at(-1) as number);
+  const initialZoom = await zoom();
+  const session = await page.context().newCDPSession(page);
+  const point = (id: number, x: number, y: number) => ({
+    id,
+    x,
+    y,
+    radiusX: 8,
+    radiusY: 8,
+    force: 1
+  });
+
+  try {
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [point(1, centerX - 30, centerY), point(2, centerX + 30, centerY)]
+    });
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [point(1, centerX - 85, centerY), point(2, centerX + 85, centerY)]
+    });
+    await expect.poll(zoom).toBeGreaterThan(initialZoom * 1.5);
+    const zoomedIn = await zoom();
+
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [point(1, centerX - 18, centerY), point(2, centerX + 18, centerY)]
+    });
+    await expect.poll(zoom).toBeLessThan(zoomedIn * 0.5);
+    await expect(page.getByRole('dialog', { name: /Details van/ })).toHaveCount(0);
+  } finally {
+    await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await session.detach();
+  }
+});
+
 test('de mobiele hoofdnavigatie benut de breedte compact en gelijkmatig', async ({
   page
 }, testInfo) => {

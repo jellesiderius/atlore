@@ -80,6 +80,14 @@
     connectedDepths: Map<string, number>;
     moved: boolean;
   } | null = null;
+  let touchPoints = new Map<number, { x: number; y: number }>();
+  let pinch: {
+    ids: [number, number];
+    startDistance: number;
+    startZoom: number;
+    worldX: number;
+    worldY: number;
+  } | null = null;
   let hover: string | null = null;
   let graphColors: Record<string, string> = {
     '--ember': '#f0913f',
@@ -505,6 +513,43 @@
     }
     return found;
   }
+  function beginPinch() {
+    const entries = [...touchPoints.entries()].slice(0, 2);
+    if (entries.length < 2) return;
+    const [[firstId, first], [secondId, second]] = entries;
+    const midpointX = (first.x + second.x) / 2;
+    const midpointY = (first.y + second.y) / 2;
+    const world = screenToWorld(midpointX, midpointY);
+    pinch = {
+      ids: [firstId, secondId],
+      startDistance: Math.max(1, Math.hypot(second.x - first.x, second.y - first.y)),
+      startZoom: camera.z,
+      worldX: world.x,
+      worldY: world.y
+    };
+    cameraTarget = null;
+    pointer = null;
+    hover = null;
+    userMoved = true;
+    requestDraw();
+  }
+  function updatePinch() {
+    if (!pinch) return;
+    const first = touchPoints.get(pinch.ids[0]);
+    const second = touchPoints.get(pinch.ids[1]);
+    if (!first || !second) return;
+    const midpointX = (first.x + second.x) / 2;
+    const midpointY = (first.y + second.y) / 2;
+    const distance = Math.max(1, Math.hypot(second.x - first.x, second.y - first.y));
+    const nextZoom = Math.max(
+      0.12,
+      Math.min(4, pinch.startZoom * (distance / pinch.startDistance))
+    );
+    camera.z = nextZoom;
+    camera.x = midpointX - pinch.worldX * nextZoom;
+    camera.y = midpointY - pinch.worldY * nextZoom;
+    requestDraw();
+  }
   function down(event: PointerEvent) {
     if (event.button !== 0) return;
     cameraTarget = null;
@@ -512,8 +557,16 @@
     canvas.setPointerCapture(event.pointerId);
     const rect = canvas.getBoundingClientRect(),
       x = event.clientX - rect.left,
-      y = event.clientY - rect.top,
-      n = nodeAt(x, y);
+      y = event.clientY - rect.top;
+    if (event.pointerType === 'touch') {
+      event.preventDefault();
+      touchPoints.set(event.pointerId, { x, y });
+      if (touchPoints.size >= 2) {
+        beginPinch();
+        return;
+      }
+    }
+    const n = nodeAt(x, y);
     const world = screenToWorld(x, y);
     const nodePosition = n ? positions.get(n.id) : null;
     if (n) {
@@ -539,6 +592,14 @@
     const rect = canvas.getBoundingClientRect(),
       x = event.clientX - rect.left,
       y = event.clientY - rect.top;
+    if (event.pointerType === 'touch' && touchPoints.has(event.pointerId)) {
+      touchPoints.set(event.pointerId, { x, y });
+      if (pinch) {
+        event.preventDefault();
+        updatePinch();
+        return;
+      }
+    }
     if (pointer?.id === event.pointerId) {
       const dx = x - pointer.lastX,
         dy = y - pointer.lastY;
@@ -574,6 +635,15 @@
     requestDraw();
   }
   function up(event: PointerEvent) {
+    const endedPinch = Boolean(pinch?.ids.includes(event.pointerId));
+    if (event.pointerType === 'touch') touchPoints.delete(event.pointerId);
+    if (endedPinch) {
+      pinch = null;
+      pointer = null;
+      hover = null;
+      requestDraw();
+      return;
+    }
     if (!pointer || pointer.id !== event.pointerId) return;
     const id = pointer.nodeId;
     if (!pointer.moved) onSelect(id, event.clientX, event.clientY);
@@ -584,6 +654,13 @@
       onMove?.(id, pos.x, pos.y);
     }
     pointer = null;
+    requestDraw();
+  }
+  function cancel(event: PointerEvent) {
+    if (event.pointerType === 'touch') touchPoints.delete(event.pointerId);
+    if (pinch?.ids.includes(event.pointerId)) pinch = null;
+    if (pointer?.id === event.pointerId) pointer = null;
+    hover = null;
     requestDraw();
   }
   function leave() {
@@ -620,6 +697,8 @@
   function contextmenu(event: MouseEvent) {
     event.preventDefault();
     pointer = null;
+    pinch = null;
+    touchPoints.clear();
     const rect = canvas.getBoundingClientRect(),
       x = event.clientX - rect.left,
       y = event.clientY - rect.top;
@@ -853,7 +932,7 @@
   onpointerdown={down}
   onpointermove={move}
   onpointerup={up}
-  onpointercancel={up}
+  onpointercancel={cancel}
   onpointerleave={leave}
   onwheel={wheel}
   ondblclick={doubleClick}

@@ -20,6 +20,7 @@
     surfaceStatus = '',
     surfaceStatusTone = 'neutral',
     ariaLabel = '',
+    excludeNodeId = null,
     onChange,
     openNode,
     previewNode,
@@ -39,6 +40,7 @@
     surfaceStatus?: string;
     surfaceStatusTone?: 'neutral' | 'saving' | 'saved' | 'error' | 'live';
     ariaLabel?: string;
+    excludeNodeId?: string | null;
     onChange?: (body: Paragraph[]) => void;
     openNode?: (id: string) => void;
     previewNode?: (id: string | null, x?: number, y?: number, delay?: number) => void;
@@ -56,10 +58,11 @@
   let suggestionTimer: ReturnType<typeof setTimeout>;
   let lastExternal = '';
   let typeMap = $derived(new Map(types.map((type) => [type.key, type])));
+  let mentionNodes = $derived(nodes.filter((node) => node.id !== excludeNodeId));
   let results = $derived.by(() => {
     if (!menu) return [];
-    if (menu.query.trim()) return searchNodes(nodes, menu.query, { limit: 8 });
-    return nodes.filter((node) => !node.trashedAt && node.type !== 'session').slice(0, 8);
+    if (menu.query.trim()) return searchNodes(mentionNodes, menu.query, { limit: 8 });
+    return mentionNodes.filter((node) => !node.trashedAt && node.type !== 'session').slice(0, 8);
   });
   let canCreate = $derived.by(() => {
     if (!createNode || !menu) return false;
@@ -392,7 +395,10 @@
         event.stopPropagation();
         const existing = nodes.find(
           (node) =>
-            !node.trashedAt && node.type !== 'session' && fold(node.title) === fold(selection.text)
+            node.id !== excludeNodeId &&
+            !node.trashedAt &&
+            node.type !== 'session' &&
+            fold(node.title) === fold(selection.text)
         );
         const item: MenuItem = existing
           ? {
@@ -460,7 +466,13 @@
   function markSuggestions() {
     if (!editor || readonly || menu || nodes.length > 3_000) return;
     const candidates = nodes
-      .filter((node) => !node.trashedAt && node.type !== 'session' && node.title.length > 2)
+      .filter(
+        (node) =>
+          node.id !== excludeNodeId &&
+          !node.trashedAt &&
+          node.type !== 'session' &&
+          node.title.length > 2
+      )
       .sort((a, b) => b.title.length - a.title.length)
       .slice(0, 400)
       .map((node) => ({ id: node.id, title: node.title }));

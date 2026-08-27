@@ -7,7 +7,7 @@ test('een @ toont nodes en biedt daaronder een nieuwe node aan', async ({ page }
   await page.getByRole('button', { name: 'Inloggen' }).click();
   await expect(page).toHaveURL(/\/campaigns$/);
 
-  const campaignId = await page.evaluate(async () => {
+  const { campaignId, ownNodeId } = await page.evaluate(async () => {
     const response = await fetch('/api/campaigns', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -19,6 +19,7 @@ test('een @ toont nodes en biedt daaronder een nieuwe node aan', async ({ page }
     });
     if (!response.ok) throw new Error(await response.text());
     const campaign = await response.json();
+    let ownNodeId = '';
     for (const title of [
       'Bestaande testnode',
       'Jan',
@@ -46,6 +47,8 @@ test('een @ toont nodes en biedt daaronder een nieuwe node aan', async ({ page }
         })
       });
       if (!nodeResponse.ok) throw new Error(await nodeResponse.text());
+      const created = await nodeResponse.json();
+      if (!ownNodeId) ownNodeId = created.id;
     }
     const sessionResponse = await fetch(`/api/campaigns/${campaign.id}/sessions`, {
       method: 'POST',
@@ -53,7 +56,7 @@ test('een @ toont nodes en biedt daaronder een nieuwe node aan', async ({ page }
       body: JSON.stringify({ title: 'Mentiontest', worldDate: '' })
     });
     if (!sessionResponse.ok) throw new Error(await sessionResponse.text());
-    return campaign.id as string;
+    return { campaignId: campaign.id as string, ownNodeId };
   });
 
   try {
@@ -126,6 +129,15 @@ test('een @ toont nodes en biedt daaronder een nieuwe node aan', async ({ page }
     await expect(menu.getByText('Nieuw: “Volledig nieuwe node”', { exact: true })).toBeVisible();
     await menu.getByText('Nieuw: “Volledig nieuwe node”', { exact: true }).click();
     await expect(page.getByPlaceholder('Naam')).toHaveValue('Volledig nieuwe node');
+
+    await page.goto(`/campaigns/${campaignId}?node=${ownNodeId}`);
+    await expect(page.getByLabel('Nodenaam')).toHaveValue('Bestaande testnode');
+    const nodeEditor = page.getByRole('textbox', { name: 'Teksteditor' }).first();
+    await nodeEditor.fill('@Bestaande testnode');
+    const nodeMenu = page.getByRole('listbox');
+    await expect(nodeMenu).toBeVisible();
+    await expect(nodeMenu.getByText('Bestaande testnode', { exact: true })).toHaveCount(0);
+    await expect(nodeMenu.locator('button.new')).toHaveCount(0);
   } finally {
     await page.evaluate(async (id) => {
       await fetch(`/api/campaigns/${id}`, { method: 'DELETE' });

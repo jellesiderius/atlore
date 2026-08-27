@@ -400,7 +400,9 @@
       previewHideTimer = setTimeout(() => (previewId = null), 220);
       return;
     }
-    if (matchMedia('(hover: none)').matches || popover || dossier) return;
+    // Delayed previews are hover-only. A zero-delay request is an intentional
+    // activation (for example, tapping a map marker) and must also work on touch.
+    if ((delay > 0 && matchMedia('(hover: none)').matches) || popover || dossier) return;
     clearTimeout(previewHideTimer);
     if (previewId === id) return;
     previewShowTimer = setTimeout(() => {

@@ -226,11 +226,14 @@
             style:--marker-color={typeMap.get(node.type)?.colorDark}
             aria-label={node.title}
             onpointerenter={(event) => {
+              if (event.pointerType === 'touch') return;
               if (moving) return;
               const rect = event.currentTarget.getBoundingClientRect();
               previewNode(node.id, rect.right + 8, rect.top - 4, 160);
             }}
-            onpointerleave={() => previewNode(null)}
+            onpointerleave={(event) => {
+              if (event.pointerType !== 'touch') previewNode(null);
+            }}
             onpointerdown={(event) => {
               event.stopPropagation();
               if (event.button !== 0) return;
@@ -245,6 +248,14 @@
                   moved: false
                 };
               }
+            }}
+            onclick={(event) => {
+              if (lastDragged?.id === node.id && performance.now() - lastDragged.at < 700) {
+                event.preventDefault();
+                return;
+              }
+              const rect = event.currentTarget.getBoundingClientRect();
+              previewNode(node.id, rect.right + 8, rect.top - 4, 0);
             }}
             ondblclick={(event) => {
               if (lastDragged?.id === node.id && performance.now() - lastDragged.at < 700) {
