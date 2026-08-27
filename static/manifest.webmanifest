@@ -1,6 +1,7 @@
 {
   "name": "Atlore",
   "short_name": "Atlore",
+  "lang": "en",
   "id": "/",
   "start_url": "/",
   "scope": "/",

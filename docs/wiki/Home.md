@@ -32,4 +32,4 @@ Welcome to the Atlore documentation. Atlore is a realtime tabletop RPG campaign 
 - **Personal notes:** private text visible only to its author.
 - **Atlas:** the campaign map and any maps attached to place nodes.
 
-Atlore supports Dutch and English. Dutch is the initial language; each user can change this from the account menu.
+Atlore supports English and Dutch. English is the initial language; each user can change this from the account menu.

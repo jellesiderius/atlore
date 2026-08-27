@@ -11,6 +11,23 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000',
+    // Most product flows deliberately exercise the Dutch catalog. The i18n
+    // spec clears this cookie and verifies that a fresh browser starts in English.
+    storageState: {
+      cookies: [
+        {
+          name: 'atlore_locale',
+          value: 'nl',
+          domain: 'localhost',
+          path: '/',
+          expires: -1,
+          httpOnly: false,
+          secure: false,
+          sameSite: 'Lax'
+        }
+      ],
+      origins: []
+    },
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure'

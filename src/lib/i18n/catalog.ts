@@ -3,6 +3,7 @@ import en from './locales/en.yaml';
 
 export const SUPPORTED_LOCALES = ['nl', 'en'] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
+export const DEFAULT_LOCALE: Locale = 'en';
 export type SnippetValues = Record<string, string | number | boolean>;
 export type SnippetCatalog = Record<string, unknown>;
 
@@ -10,7 +11,7 @@ export const catalogs: Record<Locale, SnippetCatalog> = { nl, en };
 
 export function translate(locale: Locale, key: string, values: SnippetValues = {}): string {
   const translated = readSnippet(catalogs[locale], key);
-  const fallback = readSnippet(catalogs.nl, key);
+  const fallback = readSnippet(catalogs[DEFAULT_LOCALE], key);
   const template = translated ?? fallback ?? key;
   return template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_, name: string) =>
     Object.hasOwn(values, name) ? String(values[name]) : `{{${name}}}`

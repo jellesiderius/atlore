@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { extname, join } from 'node:path';
-import { catalogs, translate, type SnippetCatalog } from './catalog';
+import { catalogs, DEFAULT_LOCALE, translate, type SnippetCatalog } from './catalog';
 
 function paths(value: SnippetCatalog, prefix = ''): string[] {
   return Object.entries(value).flatMap(([key, child]) => {
@@ -25,6 +25,10 @@ function sourceFiles(directory: string): string[] {
 }
 
 describe('translation snippets', () => {
+  it('gebruikt Engels als initiële taal en vertaalfallback', () => {
+    expect(DEFAULT_LOCALE).toBe('en');
+  });
+
   it('houdt de Nederlandse en Engelse YML-catalogi gelijk', () => {
     expect(paths(catalogs.en).sort()).toEqual(paths(catalogs.nl).sort());
   });

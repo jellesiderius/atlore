@@ -1,10 +1,17 @@
 import { browser } from '$app/environment';
-import { hasTranslation, isLocale, translate, type Locale, type SnippetValues } from './catalog';
+import {
+  DEFAULT_LOCALE,
+  hasTranslation,
+  isLocale,
+  translate,
+  type Locale,
+  type SnippetValues
+} from './catalog';
 
-export { SUPPORTED_LOCALES, type Locale, type SnippetValues } from './catalog';
+export { DEFAULT_LOCALE, SUPPORTED_LOCALES, type Locale, type SnippetValues } from './catalog';
 const STORAGE_KEY = 'atlore_locale';
 const COOKIE_NAME = 'atlore_locale';
-let activeLocale = $state<Locale>('nl');
+let activeLocale = $state<Locale>(DEFAULT_LOCALE);
 let initialized = false;
 
 export const i18n = {
@@ -24,7 +31,7 @@ export function initializeLocale(): void {
     .split('; ')
     .find((entry) => entry.startsWith(`${COOKIE_NAME}=`))
     ?.split('=')[1];
-  const locale = isLocale(stored) ? stored : isLocale(cookie) ? cookie : 'nl';
+  const locale = isLocale(stored) ? stored : isLocale(cookie) ? cookie : DEFAULT_LOCALE;
   applyLocale(locale, false);
 }
 
