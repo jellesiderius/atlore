@@ -214,6 +214,11 @@ workspace:
     newHere: New node here
 graph:
   ariaLabel: Interactive knowledge graph
+  emptyHeading: Add your first node
+  emptyText: Create a person, place, item or idea and watch your world take shape.
+  emptyReadOnlyHeading: Nothing has been revealed yet
+  emptyReadOnlyText: There are no nodes visible to you in this campaign yet.
+  emptyAction: Add first node
   fit: Fit all
   reflow: Rearrange graph
   addNode: Node
@@ -224,6 +229,12 @@ graph:
   connect: Connect to another node
   showOnMap: Show on map
   nodeAdded: Node added.
+changelog:
+  title: What's new in Atlore
+  eyebrow: Changelog
+  current: Current version
+  source: View the complete changelog on GitHub
+  open: Open changelog for {{build}}
 node:
   name: Node name
   summary: Summary
@@ -354,6 +365,9 @@ session:
   emptyHeading: The first page is blank
   emptyText: Start a session and record what happens together.
   first: Start first session
+  blankHeading: This chapter is waiting for trouble
+  blankText: Nothing has been written yet. Give the party something to remember.
+  blankAction: Write the first line
 story:
   title: Ongoing story
   empty: No completed sessions yet.
@@ -367,6 +381,7 @@ editor:
   ariaLabel: Text editor
   writeSurface: Writing area
   readSurface: Reading view
+  mentionHint: '@ links or creates nodes'
   secretNode: Secret node
   secret: secret
   openNode: Open {{title}}

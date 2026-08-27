@@ -5,6 +5,7 @@
     mode,
     label,
     compact = false,
+    hint = '',
     status = '',
     statusTone = 'neutral',
     children
@@ -12,6 +13,7 @@
     mode: 'write' | 'read';
     label: string;
     compact?: boolean;
+    hint?: string;
     status?: string;
     statusTone?: 'neutral' | 'saving' | 'saved' | 'error' | 'live';
     children: import('svelte').Snippet;
@@ -29,6 +31,7 @@
     <span aria-hidden="true"><Icon name={mode === 'write' ? 'edit' : 'eye'} size={12} /></span>
     <b>{label}</b>
     <i></i>
+    {#if hint}<small class="hint" title={hint} data-testid="mention-hint">{hint}</small>{/if}
     {#if status}<small role="status" aria-live="polite" data-tone={statusTone}>{status}</small>{/if}
   </div>
   <div class="surface-content">{@render children()}</div>
@@ -111,6 +114,13 @@
     font: 9px var(--font-mono);
     letter-spacing: 0.02em;
     white-space: nowrap;
+  }
+  .mode-bar small.hint {
+    min-width: 0;
+    flex: 0 1 auto;
+    overflow: hidden;
+    color: color-mix(in srgb, var(--text-3) 78%, var(--ember));
+    text-overflow: ellipsis;
   }
   .mode-bar small[data-tone='saving'],
   .mode-bar small[data-tone='live'] {

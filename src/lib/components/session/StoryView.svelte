@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from '$lib/components/ui/Icon.svelte';
+  import EmptyState from '$lib/components/ui/EmptyState.svelte';
   import type { MenuItem } from '$lib/components/ui/ContextMenu.svelte';
   import RichTextView from '$lib/components/richtext/RichTextView.svelte';
   import SessionStoryEditor from '$lib/components/session/SessionStoryEditor.svelte';
@@ -66,6 +67,12 @@
     showNodeContext: (id: string, x: number, y: number, items?: MenuItem[]) => void;
   } = $props();
   let scratchMap = $derived(new Map(scratch.map((item) => [item.sessionId, item])));
+
+  function hasContent(body: Paragraph[]) {
+    return body.some((paragraph) =>
+      paragraph.segs.some((segment) => segment.t === 'ref' || segment.v.trim().length > 0)
+    );
+  }
 </script>
 
 <section class="story">
@@ -107,6 +114,7 @@
           {showNodeContext}
         />
       {:else}
+        {@const readerBody = liveBodies[session.id] ?? session.body}
         <article class="session-card">
           <header class="session-heading">
             <button class="session-open" onclick={() => editSession(session.id)}
@@ -126,15 +134,23 @@
               >{/if}
           </header>
           <div class="session-reader" aria-label={t('editor.readSurface')}>
-            <RichTextView
-              body={liveBodies[session.id] ?? session.body}
-              {nodes}
-              {types}
-              remoteCursors={liveCursors[session.id] ?? []}
-              {previewNode}
-              surface="plain"
-              {openNode}
-            />
+            {#if hasContent(readerBody)}<RichTextView
+                body={readerBody}
+                {nodes}
+                {types}
+                remoteCursors={liveCursors[session.id] ?? []}
+                {previewNode}
+                surface="plain"
+                {openNode}
+              />{:else}<EmptyState
+                icon="session"
+                heading={t('session.blankHeading')}
+                text={t('session.blankText')}
+                actionLabel={canWrite ? t('session.blankAction') : ''}
+                action={canWrite ? () => editSession(session.id) : undefined}
+                compact
+                testId={`session-empty-${session.id}`}
+              />{/if}
           </div>
           {#if scratchMap.has(session.id)}<details class="session-notes">
               <summary
@@ -157,9 +173,16 @@
             </details>{/if}
         </article>
       {/if}
-    {/each}{#if !sessions.filter((item) => !item.trashedAt).length}<p class="empty">
-        {t('story.noSessions')}
-      </p>{/if}
+    {/each}{#if !sessions.filter((item) => !item.trashedAt).length}<div class="no-sessions">
+        <EmptyState
+          icon="session"
+          heading={t('session.emptyHeading')}
+          text={t('session.emptyText')}
+          actionLabel={canStart ? t('session.first') : ''}
+          action={canStart ? createSession : undefined}
+          testId="sessions-empty-state"
+        />
+      </div>{/if}
   </div>
 </section>
 
@@ -368,10 +391,10 @@
     font-size: 13.5px;
     line-height: 1.7;
   }
-  .empty {
-    color: var(--text-3);
-    text-align: center;
-    margin-top: 15vh;
+  .no-sessions {
+    min-height: min(460px, calc(100dvh - 210px));
+    display: grid;
+    place-items: center;
   }
   @media (max-width: 600px) {
     .story > header {

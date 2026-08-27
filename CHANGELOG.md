@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- Guided empty states and direct actions for new campaign graphs, session lists, and blank session chapters.
+- Subtle `@` mention guidance on writing surfaces that can link or create nodes.
+- A readable in-app release changelog opened from the build identifier on auth and campaign screens.
+
 ## [1.1.0] - 2026-08-27
 
 ### Added

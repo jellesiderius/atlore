@@ -214,6 +214,11 @@ workspace:
     newHere: Nieuwe node hier
 graph:
   ariaLabel: Interactieve kennisgraaf
+  emptyHeading: Voeg je eerste node toe
+  emptyText: Maak een persoon, plek, voorwerp of idee en zie je wereld vorm krijgen.
+  emptyReadOnlyHeading: Er is nog niets onthuld
+  emptyReadOnlyText: Er zijn nog geen nodes voor jou zichtbaar in deze campagne.
+  emptyAction: Eerste node toevoegen
   fit: Alles passend
   reflow: Kaart opnieuw ordenen
   addNode: Node
@@ -224,6 +229,12 @@ graph:
   connect: Verbinden met een andere node
   showOnMap: Tonen op de kaart
   nodeAdded: Node toegevoegd.
+changelog:
+  title: Wat is er nieuw in Atlore
+  eyebrow: Changelog
+  current: Huidige versie
+  source: Bekijk de volledige changelog op GitHub
+  open: Open changelog voor {{build}}
 node:
   name: Nodenaam
   summary: Samenvatting
@@ -354,6 +365,9 @@ session:
   emptyHeading: De eerste bladzijde is leeg
   emptyText: Start een sessie en leg samen vast wat er gebeurt.
   first: Eerste sessie starten
+  blankHeading: Dit hoofdstuk wacht op problemen
+  blankText: Er is nog niets geschreven. Geef de groep iets om te onthouden.
+  blankAction: Schrijf de eerste regel
 story:
   title: Doorlopend verhaal
   empty: Nog geen afgeronde sessies.
@@ -367,6 +381,7 @@ editor:
   ariaLabel: Teksteditor
   writeSurface: Schrijfvlak
   readSurface: Leesweergave
+  mentionHint: '@ koppelt of maakt nodes'
   secretNode: Geheime node
   secret: geheim
   openNode: '{{title}} openen'

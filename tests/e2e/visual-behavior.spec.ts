@@ -83,13 +83,25 @@ test('light mode gebruikt een warm en volledig leesbaar kleurenpalet', async ({ 
 test('the auth and campaign screens expose the deployed build identifier', async ({ page }) => {
   await page.goto('/auth/login');
   const buildPattern = /^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?\.(?:[0-9a-f]{7,12}|dev|unknown)$/;
-  await expect(page.getByTestId('build-stamp')).toHaveText(buildPattern);
+  const authStamp = page.getByTestId('build-stamp');
+  await expect(authStamp).toHaveText(buildPattern);
+  await authStamp.click();
+  const authChangelog = page.getByRole('dialog', { name: 'Wat is er nieuw in Atlore' });
+  await expect(authChangelog).toBeVisible();
+  await expect(authChangelog.getByText('v1.1.0', { exact: true })).toBeVisible();
+  await expect(authChangelog.getByText('Unreleased', { exact: true })).toHaveCount(0);
+  await authChangelog.getByRole('button', { name: 'Sluiten' }).click();
 
   await page.getByPlaceholder('E-mailadres').fill('demo@atlore.app');
   await page.getByPlaceholder('Wachtwoord').fill('AtloreDemo!2026');
   await page.getByRole('button', { name: 'Inloggen' }).click();
   await expect(page).toHaveURL(/\/campaigns$/);
-  await expect(page.getByTestId('build-stamp')).toHaveText(buildPattern);
+  const campaignStamp = page.getByTestId('build-stamp');
+  await expect(campaignStamp).toHaveText(buildPattern);
+  await campaignStamp.click();
+  const campaignChangelog = page.getByRole('dialog', { name: 'Wat is er nieuw in Atlore' });
+  await expect(campaignChangelog).toBeVisible();
+  await expect(campaignChangelog.getByText('Huidige versie', { exact: true })).toBeVisible();
 });
 
 test('het graph-stippenraster blijft zichtbaar bij elk zoomniveau', async ({ page }) => {
@@ -135,6 +147,63 @@ test('de graph-toolbar is alleen op mobiel zichtbaar', async ({ page }, testInfo
 
   if (testInfo.project.name.includes('mobile')) await expect(toolbar).toBeVisible();
   else await expect(toolbar).toBeHidden();
+});
+
+test('an empty campaign guides the first node and first session line', async ({
+  page,
+  request
+}) => {
+  const apiLogin = await request.post('/api/auth/login', {
+    data: { email: 'demo@atlore.app', password: 'AtloreDemo!2026' }
+  });
+  expect(apiLogin.ok()).toBeTruthy();
+  const campaignResponse = await request.post('/api/campaigns', {
+    data: {
+      title: `Empty-state E2E ${Date.now()}`,
+      system: 'Daggerheart',
+      note: 'Temporary empty-state test'
+    }
+  });
+  expect(campaignResponse.ok()).toBeTruthy();
+  const campaign = (await campaignResponse.json()) as { id: string };
+
+  await page.goto('/auth/login');
+  await page.getByPlaceholder('E-mailadres').fill('demo@atlore.app');
+  await page.getByPlaceholder('Wachtwoord').fill('AtloreDemo!2026');
+  await page.getByRole('button', { name: 'Inloggen' }).click();
+  await expect(page).toHaveURL(/\/campaigns$/);
+
+  try {
+    await page.goto(`/campaigns/${campaign.id}`);
+    const graphEmpty = page.getByTestId('graph-empty-state');
+    await expect(graphEmpty).toBeVisible();
+    await expect(graphEmpty.getByRole('heading')).toHaveText('Voeg je eerste node toe');
+    await page.getByTestId('graph-empty-state-action').click();
+    await expect(page.getByRole('dialog', { name: 'Nieuwe node' })).toBeVisible();
+    await page.getByRole('button', { name: 'Annuleer' }).click();
+
+    await page.goto(`/campaigns/${campaign.id}?view=session&mode=read`);
+    const sessionsEmpty = page.getByTestId('sessions-empty-state');
+    await expect(sessionsEmpty).toBeVisible();
+    await sessionsEmpty.getByRole('button', { name: 'Eerste sessie starten' }).click();
+    await expect(page.getByRole('dialog', { name: 'Nieuwe sessie' })).toBeVisible();
+    await page.getByRole('button', { name: 'Annuleer' }).click();
+
+    const sessionResponse = await request.post(`/api/campaigns/${campaign.id}/sessions`, {
+      data: { title: 'The suspiciously quiet tavern', worldDate: '' }
+    });
+    expect(sessionResponse.ok()).toBeTruthy();
+    const session = (await sessionResponse.json()) as { id: string };
+    await page.goto(`/campaigns/${campaign.id}?view=session&session=${session.id}&mode=read`);
+    const sessionEmpty = page.getByTestId(`session-empty-${session.id}`);
+    await expect(sessionEmpty).toBeVisible();
+    await expect(sessionEmpty.getByRole('heading')).toHaveText('Dit hoofdstuk wacht op problemen');
+    await sessionEmpty.getByRole('button', { name: 'Schrijf de eerste regel' }).click();
+    await expect(page).toHaveURL(/mode=write/);
+    await expect(page.getByTestId('mention-hint').first()).toHaveText('@ koppelt of maakt nodes');
+  } finally {
+    await request.delete(`/api/campaigns/${campaign.id}`);
+  }
 });
 
 test('de mobiele graph zoomt vloeiend in en uit met een pinch', async ({ page }, testInfo) => {

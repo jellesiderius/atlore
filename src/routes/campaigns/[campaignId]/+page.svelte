@@ -18,6 +18,7 @@
   import NavigationRail from '$lib/components/workspace/NavigationRail.svelte';
   import WorkspaceHeader from '$lib/components/workspace/WorkspaceHeader.svelte';
   import Modal from '$lib/components/ui/Modal.svelte';
+  import EmptyState from '$lib/components/ui/EmptyState.svelte';
   import ToastStack, { type Toast } from '$lib/components/ui/ToastStack.svelte';
   import { api, debounce } from '$lib/client/api';
   import { createClientId } from '$lib/client/id';
@@ -124,6 +125,7 @@
   let realtimeNodeCursorThrottle: ReturnType<typeof setTimeout> | undefined;
   const realtimeCursorExpiry = new Map<string, ReturnType<typeof setTimeout>>();
   let nodeMap = $derived(new Map(snapshot.nodes.map((node) => [node.id, node])));
+  let hasActiveNodes = $derived(snapshot.nodes.some((node) => !node.trashedAt));
   let popoverNode = $derived(popover ? nodeMap.get(popover) : undefined);
   let previewNodeEntry = $derived(previewId ? nodeMap.get(previewId) : undefined);
   let dossierNode = $derived(dossier ? nodeMap.get(dossier) : undefined);
@@ -1113,7 +1115,16 @@
           reflow={() => graph?.reflow()}
           newNode={() => (createState = { title: '', x: 0, y: 0 })}
           canCreate={can('create')}
-        />{#if popoverNode}<NodePopover
+        />{#if !hasActiveNodes}<div class="graph-empty">
+            <EmptyState
+              icon="graph"
+              heading={t(can('create') ? 'graph.emptyHeading' : 'graph.emptyReadOnlyHeading')}
+              text={can('create') ? t('graph.emptyText') : t('graph.emptyReadOnlyText')}
+              actionLabel={can('create') ? t('graph.emptyAction') : ''}
+              action={can('create') ? () => (createState = { title: '', x: 0, y: 0 }) : undefined}
+              testId="graph-empty-state"
+            />
+          </div>{/if}{#if popoverNode}<NodePopover
             node={popoverNode}
             type={typeMap.get(popoverNode.type)}
             media={snapshot.media}
@@ -1451,6 +1462,17 @@
     min-width: 0;
     min-height: 0;
     overflow: hidden;
+  }
+  .graph-empty {
+    position: absolute;
+    z-index: 4;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+  }
+  .graph-empty :global(.empty-state) {
+    pointer-events: auto;
   }
   .session-form {
     display: flex;

@@ -580,6 +580,7 @@
 <TextSurface
   mode={readonly ? 'read' : 'write'}
   label={surfaceLabel || t(readonly ? 'editor.readSurface' : 'editor.writeSurface')}
+  hint={!readonly && Boolean(createNode) ? t('editor.mentionHint') : ''}
   status={surfaceStatus}
   statusTone={surfaceStatusTone}
   {compact}
