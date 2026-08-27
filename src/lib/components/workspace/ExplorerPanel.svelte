@@ -566,7 +566,7 @@
       position: fixed;
       left: 0;
       top: calc(52px + env(safe-area-inset-top));
-      bottom: calc(58px + env(safe-area-inset-bottom));
+      bottom: calc(var(--mobile-navigation-height, 54px) + env(safe-area-inset-bottom));
       width: var(--panel-width) !important;
       box-shadow: 18px 0 50px rgba(0, 0, 0, 0.45);
       transform: translateX(-105%);

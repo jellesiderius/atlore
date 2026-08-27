@@ -125,6 +125,41 @@ test('de graph-toolbar is alleen op mobiel zichtbaar', async ({ page }, testInfo
   else await expect(toolbar).toBeHidden();
 });
 
+test('de mobiele hoofdnavigatie benut de breedte compact en gelijkmatig', async ({
+  page
+}, testInfo) => {
+  test.skip(!testInfo.project.name.includes('mobile'), 'Dit gedrag geldt alleen voor mobiel.');
+  await openDemoCampaign(page);
+  const navigation = page.getByRole('navigation', { name: 'Hoofdweergaven' });
+  const buttons = navigation.getByRole('button');
+  await expect(buttons).toHaveCount(4);
+
+  const layout = await navigation.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const items = [...element.querySelectorAll<HTMLElement>('button')];
+    const boxes = items.map((item) => item.getBoundingClientRect());
+    return {
+      display: style.display,
+      columns: style.gridTemplateColumns.split(' ').length,
+      height: element.getBoundingClientRect().height,
+      buttonHeights: boxes.map((box) => box.height),
+      widthDifference:
+        Math.max(...boxes.map((box) => box.width)) - Math.min(...boxes.map((box) => box.width)),
+      gaps: boxes.slice(1).map((box, index) => box.left - boxes[index].right),
+      directions: items.map((item) => getComputedStyle(item).flexDirection)
+    };
+  });
+
+  expect(layout.display).toBe('grid');
+  expect(layout.columns).toBe(4);
+  expect(layout.height).toBeLessThanOrEqual(60);
+  expect(layout.buttonHeights.every((height) => height >= 44)).toBe(true);
+  expect(layout.widthDifference).toBeLessThan(1);
+  expect(layout.gaps.every((gap) => gap <= 4.1)).toBe(true);
+  expect(layout.directions).toEqual(['row', 'row', 'row', 'row']);
+  await expect(buttons.first()).toHaveAttribute('aria-current', 'page');
+});
+
 test('verborgen nodes hebben de ghoststijl uit het prototype', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name.includes('mobile'), 'De Explorer is op mobiel ingeklapt.');
   await page.addInitScript(() => {

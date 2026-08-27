@@ -16,6 +16,7 @@
   {#each items as item}<button
       class:active={view === item.key}
       aria-label={t(item.labelKey)}
+      aria-current={view === item.key ? 'page' : undefined}
       use:tooltip={t(item.labelKey)}
       onclick={() => pick(item.key)}
       ><Icon name={item.icon} size={17} /><span>{t(item.labelKey)}</span></button
@@ -63,27 +64,51 @@
       right: 0;
       bottom: 0;
       width: auto;
-      height: calc(58px + env(safe-area-inset-bottom));
-      padding: 4px 8px env(safe-area-inset-bottom);
+      height: calc(var(--mobile-navigation-height, 54px) + env(safe-area-inset-bottom));
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 4px;
+      padding: 5px max(6px, env(safe-area-inset-right)) calc(5px + env(safe-area-inset-bottom))
+        max(6px, env(safe-area-inset-left));
       border: 0;
       border-top: 1px solid var(--line);
-      flex-direction: row;
-      justify-content: space-around;
-      background: var(--bg-2);
+      background: color-mix(in srgb, var(--bg-2) 94%, transparent);
+      box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.16);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
     }
     button {
-      width: auto;
-      height: 48px;
-      min-width: 58px;
+      position: relative;
+      width: 100%;
+      height: 44px;
+      min-width: 0;
       display: flex;
-      flex-direction: column;
-      gap: 3px;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border-radius: 10px;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button.active {
+      background: color-mix(in srgb, var(--ember) 10%, var(--bg-3));
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ember) 18%, transparent);
+    }
+    button :global(svg) {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 auto;
     }
     button span {
       display: block;
-      font: 8.5px var(--font-mono);
+      min-width: 0;
+      overflow: hidden;
+      font: 9px var(--font-mono);
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.045em;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
   }
 </style>

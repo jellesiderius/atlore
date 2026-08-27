@@ -1424,6 +1424,7 @@
 
 <style>
   .workspace {
+    --mobile-navigation-height: 54px;
     height: 100dvh;
     display: flex;
     flex-direction: column;
@@ -1460,7 +1461,7 @@
   }
   @media (max-width: 859px) {
     .stage {
-      padding-bottom: calc(58px + env(safe-area-inset-bottom));
+      padding-bottom: calc(var(--mobile-navigation-height) + env(safe-area-inset-bottom));
     }
   }
 </style>

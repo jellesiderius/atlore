@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import Icon from '$lib/components/ui/Icon.svelte';
   import RemoteCursors, { type RemoteCursor } from './RemoteCursors.svelte';
   import TextSurface from './TextSurface.svelte';
   import { searchNodes, fold } from '$lib/domain/search';
@@ -596,27 +597,32 @@
 </TextSurface>
 {#if menu}
   <div class="mention-menu" style:left={`${menu.x}px`} style:top={`${menu.y}px`} role="listbox">
-    {#each results as node, index}<button
-        class:active={menu.index === index}
-        onpointerdown={(event) => {
-          event.preventDefault();
-          insert(node.id);
-        }}
-        ><span style:background={typeMap.get(node.type)?.colorDark}></span><b>{node.title}</b><small
-          >{typeMap.get(node.type) ? nodeTypeLabel(typeMap.get(node.type)!, 'singular') : ''}</small
-        ></button
-      >{/each}
+    <div class="mention-results">
+      {#each results as node, index}<button
+          class:active={menu.index === index}
+          onpointerdown={(event) => {
+            event.preventDefault();
+            insert(node.id);
+          }}
+          ><span style:background={typeMap.get(node.type)?.colorDark}></span><b>{node.title}</b
+          ><small
+            >{typeMap.get(node.type)
+              ? nodeTypeLabel(typeMap.get(node.type)!, 'singular')
+              : ''}</small
+          ></button
+        >{/each}
+      {#if !results.length && !canCreate}<div class="empty">{t('editor.noResults')}</div>{/if}
+    </div>
     {#if canCreate}<button
         class="new"
         class:active={menu.index === results.length}
         onpointerdown={createFromMenu}
-        ><span>+</span><b
+        ><span><Icon name="plus" size={11} strokeWidth={2} /></span><b
           >{menu.query.trim()
             ? t('editor.newNode', { title: menu.query.trim() })
             : t('editor.createNode')}</b
         ></button
       >{/if}
-    {#if !results.length && !canCreate}<div class="empty">{t('editor.noResults')}</div>{/if}
   </div>
 {/if}
 
@@ -672,13 +678,20 @@
     z-index: 95;
     width: min(290px, calc(100vw - 20px));
     max-height: 270px;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     padding: 5px;
     border: 1px solid var(--line-2);
     border-radius: 11px;
     background: var(--bg-2);
     box-shadow: 0 18px 48px rgba(0, 0, 0, 0.48);
     animation: fade-in 0.12s ease;
+  }
+  .mention-results {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
   .mention-menu button {
     width: 100%;
@@ -717,6 +730,7 @@
     color: var(--text-3);
   }
   .mention-menu button.new {
+    flex: 0 0 auto;
     border-top: 1px solid var(--line);
     margin-top: 3px;
     border-radius: 0 0 8px 8px;
@@ -725,8 +739,9 @@
   .mention-menu button.new span {
     width: 17px;
     height: 17px;
-    display: grid;
-    place-items: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: 1px solid var(--line);
     background: transparent;
   }

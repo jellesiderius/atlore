@@ -19,7 +19,16 @@ test('een @ toont nodes en biedt daaronder een nieuwe node aan', async ({ page }
     });
     if (!response.ok) throw new Error(await response.text());
     const campaign = await response.json();
-    for (const title of ['Bestaande testnode', 'Jan', 'Kees', 'Kare', 'Bertje', 'Klaas']) {
+    for (const title of [
+      'Bestaande testnode',
+      'Jan',
+      'Kees',
+      'Kare',
+      'Bertje',
+      'Klaas',
+      'Extra testnode één',
+      'Extra testnode twee'
+    ]) {
       const nodeResponse = await fetch(`/api/campaigns/${campaign.id}/nodes`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -79,6 +88,33 @@ test('een @ toont nodes en biedt daaronder een nieuwe node aan', async ({ page }
     const menu = page.getByRole('listbox');
     await expect(menu).toBeVisible();
     await expect(menu.getByText('Bestaande testnode', { exact: true })).toBeVisible();
+    await expect(menu.getByText('Nieuwe node maken', { exact: true })).toBeVisible();
+    const menuLayout = await menu.evaluate((element) => {
+      const results = element.querySelector<HTMLElement>('.mention-results')!;
+      const create = element.querySelector<HTMLElement>('button.new')!;
+      const plus = create.querySelector<HTMLElement>('span')!;
+      const icon = plus.querySelector<SVGElement>('svg')!;
+      const menuBox = element.getBoundingClientRect();
+      const createBox = create.getBoundingClientRect();
+      const plusBox = plus.getBoundingClientRect();
+      const iconBox = icon.getBoundingClientRect();
+      results.scrollTop = results.scrollHeight;
+      return {
+        resultsScrollable: results.scrollHeight > results.clientHeight,
+        footerInsideMenu: createBox.bottom <= menuBox.bottom,
+        footerSeparated: getComputedStyle(create).borderTopStyle !== 'none',
+        plusCenterDelta: Math.max(
+          Math.abs(plusBox.left + plusBox.width / 2 - (iconBox.left + iconBox.width / 2)),
+          Math.abs(plusBox.top + plusBox.height / 2 - (iconBox.top + iconBox.height / 2))
+        )
+      };
+    });
+    expect(menuLayout).toEqual({
+      resultsScrollable: true,
+      footerInsideMenu: true,
+      footerSeparated: true,
+      plusCenterDelta: 0
+    });
     await expect(menu.getByText('Nieuwe node maken', { exact: true })).toBeVisible();
 
     await editor.pressSequentially('Bestaande testnode');
