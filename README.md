@@ -10,6 +10,7 @@
   <a href="#what-is-atlore-really">About</a> ·
   <a href="#a-look-inside">Screenshots</a> ·
   <a href="#getting-started">Getting started</a> ·
+  <a href="https://github.com/jellesiderius/atlore/releases/latest">Latest release</a> ·
   <a href="https://github.com/jellesiderius/atlore/wiki">Documentation</a> ·
   <a href="#architecture">Architecture</a> ·
   <a href="./LICENSE">MIT License</a>
@@ -65,6 +66,34 @@ The game master controls what is revealed. Players can contribute shared knowled
       <sub><strong>Knowledge with context.</strong> Dossiers connect descriptions, private notes, relations, maps, and story appearances.</sub>
     </td>
   </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="./docs/assets/screenshots/atlore-graph-focus.png">
+        <img src="./docs/assets/screenshots/atlore-graph-focus.png" alt="A connected node cluster in focus in Atlore's knowledge graph" width="100%" />
+      </a><br />
+      <sub><strong>Follow one thread.</strong> Selecting a node brings its direct relationships forward while the rest of the world recedes.</sub>
+    </td>
+    <td width="50%" valign="top">
+      <a href="./docs/assets/screenshots/atlore-map.jpg">
+        <img src="./docs/assets/screenshots/atlore-map.jpg" alt="A fantasy campaign map with linked Atlore node markers" width="100%" />
+      </a><br />
+      <sub><strong>Give every place a position.</strong> Campaign locations become linked, draggable markers on a shared map.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="62%" valign="top">
+      <a href="./docs/assets/screenshots/atlore-session-editor.png">
+        <img src="./docs/assets/screenshots/atlore-session-editor.png" alt="Atlore's collaborative session editor with linked node mentions" width="100%" />
+      </a><br />
+      <sub><strong>Capture the session while it happens.</strong> Shared writing, private notes, autosave, and live <code>@</code> references stay in one focused surface.</sub>
+    </td>
+    <td width="38%" valign="top" align="center">
+      <a href="./docs/assets/screenshots/atlore-mobile.png">
+        <img src="./docs/assets/screenshots/atlore-mobile.png" alt="The Atlore knowledge graph on a mobile screen" width="58%" />
+      </a><br />
+      <sub><strong>Take the campaign with you.</strong> Graph, sessions, and maps remain accessible on smaller screens.</sub>
+    </td>
+  </tr>
 </table>
 
 ---
@@ -96,6 +125,16 @@ Atlore does not try to replace your virtual tabletop. It is the campaign memory 
 ### I want to run Atlore
 
 You need Docker Desktop—or Docker Engine with Compose—and GNU Make.
+
+Use the **[latest GitHub release](https://github.com/jellesiderius/atlore/releases/latest)** if you want a versioned source archive without installing Git. Download the `.zip` or `.tar.gz`, extract it, open a terminal in the extracted `atlore-*` directory, and continue with:
+
+```bash
+cp .env.example .env
+make up
+make seed
+```
+
+Or clone the current `main` branch:
 
 ```bash
 git clone https://github.com/jellesiderius/atlore.git
