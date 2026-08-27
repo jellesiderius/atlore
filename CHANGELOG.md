@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-08-27
+
 ### Fixed
 
 - Image and map uploads within `MAX_UPLOAD_MB` are no longer rejected by adapter-node's much smaller default request-body limit.
@@ -51,7 +53,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Responsive desktop and mobile navigation, installable PWA metadata, Docker Compose, Make commands, automated tests, CI, screenshots, and a complete GitHub Wiki.
 - MIT license, contribution guide, funding configuration, demo campaign, and documented release archives.
 
-[Unreleased]: https://github.com/jellesiderius/atlore/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/jellesiderius/atlore/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/jellesiderius/atlore/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/jellesiderius/atlore/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/jellesiderius/atlore/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/jellesiderius/atlore/releases/tag/v1.0.0
