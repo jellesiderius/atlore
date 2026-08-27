@@ -193,7 +193,7 @@ campaign:
 navigation:
   label: Main views
   graph: Graph
-  session: Session
+  session: Sessions
   story: Story
   atlas: Map
 workspace:
@@ -333,6 +333,8 @@ session:
   newEyebrow: A new chapter
   titlePlaceholder: Session {{number}} · Title
   start: Start session
+  new: New session
+  read: Read
   title: Session title
   notesForMentions: Notes for mentioned nodes
   scratch: Personal session notes

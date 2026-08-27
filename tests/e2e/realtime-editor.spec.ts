@@ -105,7 +105,8 @@ test('twee gebruikers zien sessietekst direct via de realtime socket', async ({
       })
       .toEqual([firstParagraph, '', 'kees']);
 
-    await player.getByRole('button', { name: 'Verhaal', exact: true }).click();
+    await player.getByRole('button', { name: 'Lezen', exact: true }).click();
+    await expect(player).toHaveURL(/mode=read/);
     const storySession = player.locator('.story article').filter({ hasText: session.title });
     const reader = storySession.locator('.rich-view').first();
     await expect(reader.locator('p')).toHaveCount(3);
@@ -119,6 +120,9 @@ test('twee gebruikers zien sessietekst direct via de realtime socket', async ({
     await expect(storySession.locator('.remote-cursor').filter({ hasText: 'Jelle' })).toBeVisible({
       timeout: 1_000
     });
+    await storySession.getByRole('button', { name: 'Bewerken', exact: true }).click();
+    await expect(player).toHaveURL(/mode=write/);
+    await expect(player.getByRole('textbox', { name: 'Teksteditor' }).first()).toBeEditable();
     await expect
       .poll(async () => {
         const workspace = await (

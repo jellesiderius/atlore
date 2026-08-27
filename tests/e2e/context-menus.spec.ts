@@ -187,7 +187,7 @@ test('alle graph-, explorer- en tekstacties uit het contextmenu werken', async (
     await expect(page.getByRole('menu')).toBeVisible();
     await page.keyboard.press('Escape');
 
-    await page.getByRole('button', { name: 'Sessie', exact: true }).click();
+    await page.getByRole('button', { name: 'Sessies', exact: true }).click();
     await searchHero.click({ button: 'right' });
     await page.getByRole('menu').getByRole('menuitem', { name: 'Toon in de graph' }).click();
     await expect(page.getByLabel('Interactieve kennisgraaf')).toBeVisible();
@@ -253,7 +253,8 @@ test('alle graph-, explorer- en tekstacties uit het contextmenu werken', async (
     const created = await workspaceNode(page, world.campaignId, createdId);
     expect(Math.abs(created.x) + Math.abs(created.y)).toBeGreaterThan(10);
 
-    await page.getByRole('button', { name: 'Sessie', exact: true }).click();
+    await page.getByRole('button', { name: 'Sessies', exact: true }).click();
+    await page.getByRole('button', { name: 'Bewerken', exact: true }).first().click();
     const editor = page.getByRole('textbox', { name: 'Teksteditor' }).first();
     const chip = editor.locator('[data-ref]').first();
     await expect(chip).toHaveText('Contextheld');

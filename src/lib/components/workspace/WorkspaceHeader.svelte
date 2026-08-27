@@ -17,7 +17,7 @@
 </script>
 
 <header class="workspace-header">
-  <div class="panel-toggle">
+  <div class="header-actions">
     <button
       class="icon-button"
       class:active={panelOpen}
@@ -25,12 +25,16 @@
       use:tooltip={t('workspace.togglePanel')}
       onclick={togglePanel}><Icon name="panel" size={17} /></button
     >
+    <button
+      class="icon-button back"
+      aria-label={t('workspace.backToCampaigns')}
+      use:tooltip={t('workspace.backToCampaigns')}
+      onclick={exit}><Icon name="back" size={17} /></button
+    >
   </div>
-  <button class="campaign-title" onclick={exit} use:tooltip={t('workspace.backToCampaigns')}
-    ><Icon name="back" size={14} /><span
-      ><small>{campaign.system}</small><b class="serif-title">{campaign.title}</b></span
-    ></button
-  >
+  <div class="campaign-title">
+    <small>{campaign.system}</small><b class="serif-title">{campaign.title}</b>
+  </div>
 </header>
 
 <style>
@@ -45,33 +49,26 @@
     position: relative;
     z-index: 35;
   }
-  .panel-toggle {
-    width: 52px;
-    display: grid;
-    place-items: center;
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 7px;
   }
-  .panel-toggle .active {
+  .header-actions .active {
     color: var(--ember);
+  }
+  .header-actions .back {
+    color: var(--text-2);
   }
   .campaign-title {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
     max-width: calc(100% - 250px);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border: 0;
-    background: transparent;
+    min-width: 0;
     color: var(--text);
     text-align: center;
-  }
-  .campaign-title > :global(svg) {
-    color: var(--text-3);
-    flex: 0 0 auto;
-  }
-  .campaign-title span {
-    min-width: 0;
   }
   .campaign-title small {
     display: block;
@@ -90,8 +87,12 @@
     font-weight: 400;
   }
   @media (max-width: 600px) {
+    .header-actions {
+      gap: 0;
+      padding-inline: 4px;
+    }
     .campaign-title {
-      max-width: calc(100% - 130px);
+      max-width: calc(100% - 150px);
     }
   }
 </style>

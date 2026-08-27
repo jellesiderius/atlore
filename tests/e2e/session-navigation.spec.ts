@@ -62,7 +62,8 @@ test('sessietekst slaat ook bij direct wisselen op en blijft lokaal actueel', as
   try {
     await page.goto(`/campaigns/${workspace.campaignId}`);
     await waitForWorkspace(page);
-    await page.getByRole('button', { name: 'Sessie', exact: true }).click();
+    await page.getByRole('button', { name: 'Sessies', exact: true }).click();
+    await page.getByRole('button', { name: 'Bewerken', exact: true }).first().click();
     const editor = page.getByRole('textbox', { name: 'Teksteditor' }).first();
     await expect(editor).toBeVisible();
 
@@ -77,7 +78,8 @@ test('sessietekst slaat ook bij direct wisselen op en blijft lokaal actueel', as
     await page.getByRole('button', { name: 'Graph', exact: true }).click();
     await saved;
 
-    await page.getByRole('button', { name: 'Sessie', exact: true }).click();
+    await page.getByRole('button', { name: 'Sessies', exact: true }).click();
+    await page.getByRole('button', { name: 'Bewerken', exact: true }).first().click();
     await expect(page.getByRole('textbox', { name: 'Teksteditor' }).first()).toContainText(story);
     await page.reload();
     await expect(page.getByRole('textbox', { name: 'Teksteditor' }).first()).toContainText(story);
@@ -173,6 +175,91 @@ test('de cursor blijft na een @-link en een inkomende save op zijn positie', asy
   }
 });
 
+test('de sessielezer groepeert tekst en privénotities in één nette kaart', async ({ page }) => {
+  const workspace = await createWorkspace(page);
+  const sharedText = `Leesbare sessietekst ${Date.now()}`;
+  const privateText = `Persoonlijke readernotitie ${Date.now()}`;
+
+  try {
+    await page.evaluate(
+      async ({ campaignId, sessionId, sharedText, privateText }) => {
+        const headers = { 'content-type': 'application/json' };
+        const sessionResponse = await fetch(`/api/campaigns/${campaignId}/sessions/${sessionId}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ body: [{ segs: [{ t: 'txt', v: sharedText }] }] })
+        });
+        if (!sessionResponse.ok) throw new Error(await sessionResponse.text());
+        const noteResponse = await fetch(
+          `/api/campaigns/${campaignId}/sessions/${sessionId}/scratch`,
+          {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify({ body: [{ segs: [{ t: 'txt', v: privateText }] }] })
+          }
+        );
+        if (!noteResponse.ok) throw new Error(await noteResponse.text());
+      },
+      { ...workspace, sharedText, privateText }
+    );
+    await page.goto(`/campaigns/${workspace.campaignId}?view=story`);
+
+    await expect(page.getByRole('button', { name: 'Sessies', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Verhaal', exact: true })).toHaveCount(0);
+    await expect(page.getByText('Doorlopend verhaal', { exact: true })).toHaveCount(0);
+
+    const article = page.locator('.story article').filter({ hasText: 'Navigatiesessie' });
+    await expect(article).toBeVisible();
+    await expect(article.locator('.session-reader .rich-view')).toContainText(sharedText);
+    await expect(article.locator('.session-icon')).toBeVisible();
+    await expect(article.getByRole('button', { name: 'Bewerken', exact: true })).toBeVisible();
+    await expect(article.locator(':scope > .text-surface')).toHaveCount(0);
+
+    const notes = article.locator('details.session-notes');
+    await notes.locator('summary').click();
+    await expect(notes).toHaveAttribute('open', '');
+    await expect(notes.locator('.notes-content .rich-view')).toContainText(privateText);
+    await expect(notes.locator('.text-surface')).toHaveCount(0);
+
+    const layout = await article.evaluate((element) => {
+      const card = element.getBoundingClientRect();
+      const heading = element
+        .querySelector<HTMLElement>('.session-heading')!
+        .getBoundingClientRect();
+      const icon = element.querySelector<HTMLElement>('.session-icon')!.getBoundingClientRect();
+      const summary = element.querySelector<HTMLElement>('summary')!.getBoundingClientRect();
+      const notesContent = element
+        .querySelector<HTMLElement>('.notes-content')!
+        .getBoundingClientRect();
+      return {
+        iconInsideCard:
+          icon.left >= card.left &&
+          icon.right <= card.right &&
+          icon.top >= heading.top &&
+          icon.bottom <= heading.bottom,
+        notesBelowHeader: notesContent.top >= summary.bottom
+      };
+    });
+    expect(layout).toEqual({ iconInsideCard: true, notesBelowHeader: true });
+
+    await article.getByRole('button', { name: 'Bewerken', exact: true }).click();
+    await expect(page).toHaveURL(/mode=write/);
+    const editorCard = page
+      .locator('article.editing')
+      .filter({ has: page.getByLabel('Sessietitel') });
+    const editors = editorCard.getByRole('textbox', { name: 'Teksteditor' });
+    await expect(editors).toHaveCount(2);
+    await expect(editors.nth(0)).toContainText(sharedText);
+    await expect(editors.nth(1)).toContainText(privateText);
+
+    await editorCard.getByRole('button', { name: 'Lezen', exact: true }).click();
+    await expect(page).toHaveURL(/mode=read/);
+    await expect(page.locator('.session-reader').filter({ hasText: sharedText })).toBeVisible();
+  } finally {
+    await removeWorkspace(page, workspace.campaignId);
+  }
+});
+
 test('werkruimte, sessie en dossier werken met browser back, forward en URL-herstel', async ({
   page
 }, testInfo) => {
@@ -182,9 +269,12 @@ test('werkruimte, sessie en dossier werken met browser back, forward en URL-hers
   try {
     await page.goto(`/campaigns/${workspace.campaignId}`);
     await waitForWorkspace(page);
-    await page.getByRole('button', { name: 'Sessie', exact: true }).click();
+    await page.getByRole('button', { name: 'Sessies', exact: true }).click();
     await expect(page).toHaveURL(/view=session/);
     await expect(page).toHaveURL(new RegExp(`session=${workspace.sessionId}`));
+    await expect(page).toHaveURL(/mode=read/);
+    await page.getByRole('button', { name: 'Bewerken', exact: true }).first().click();
+    await expect(page).toHaveURL(/mode=write/);
 
     const node = page
       .getByLabel('Explorer')
@@ -200,9 +290,16 @@ test('werkruimte, sessie en dossier werken met browser back, forward en URL-hers
     await expect(page).not.toHaveURL(/node=/);
 
     await page.goBack();
+    await expect(page.getByRole('textbox', { name: 'Teksteditor' })).toHaveCount(0);
+    await expect(page.locator('.session-reader').first()).toBeVisible();
+    await expect(page).toHaveURL(/mode=read/);
+
+    await page.goBack();
     await expect(page.getByLabel('Interactieve kennisgraaf')).toBeVisible();
     await expect(page).not.toHaveURL(/view=/);
 
+    await page.goForward();
+    await expect(page.locator('.session-reader').first()).toBeVisible();
     await page.goForward();
     await expect(page.getByRole('textbox', { name: 'Teksteditor' }).first()).toBeVisible();
     await page.goForward();

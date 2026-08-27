@@ -132,7 +132,7 @@ test('de mobiele hoofdnavigatie benut de breedte compact en gelijkmatig', async 
   await openDemoCampaign(page);
   const navigation = page.getByRole('navigation', { name: 'Hoofdweergaven' });
   const buttons = navigation.getByRole('button');
-  await expect(buttons).toHaveCount(4);
+  await expect(buttons).toHaveCount(3);
 
   const layout = await navigation.evaluate((element) => {
     const style = getComputedStyle(element);
@@ -151,12 +151,12 @@ test('de mobiele hoofdnavigatie benut de breedte compact en gelijkmatig', async 
   });
 
   expect(layout.display).toBe('grid');
-  expect(layout.columns).toBe(4);
+  expect(layout.columns).toBe(3);
   expect(layout.height).toBeLessThanOrEqual(60);
   expect(layout.buttonHeights.every((height) => height >= 44)).toBe(true);
   expect(layout.widthDifference).toBeLessThan(1);
   expect(layout.gaps.every((gap) => gap <= 4.1)).toBe(true);
-  expect(layout.directions).toEqual(['row', 'row', 'row', 'row']);
+  expect(layout.directions).toEqual(['row', 'row', 'row']);
   await expect(buttons.first()).toHaveAttribute('aria-current', 'page');
 });
 
@@ -224,7 +224,8 @@ test('de auth-achtergrond bevat opstijgende vuurvonken', async ({ page }) => {
 
 test('schrijf- en leesvlakken hebben een herkenbare componentstatus', async ({ page }) => {
   await openDemoCampaign(page);
-  await page.getByRole('button', { name: 'Sessie', exact: true }).click();
+  await page.getByRole('button', { name: 'Sessies', exact: true }).click();
+  await page.getByRole('button', { name: 'Bewerken', exact: true }).first().click();
 
   const writingSurfaces = page.getByLabel('Schrijfvlak');
   await expect(writingSurfaces).toHaveCount(2);
@@ -242,7 +243,7 @@ test('schrijf- en leesvlakken hebben een herkenbare componentstatus', async ({ p
     )
     .not.toBe(restingBorder);
 
-  await page.getByRole('button', { name: 'Verhaal', exact: true }).click();
+  await page.getByRole('button', { name: 'Sessies', exact: true }).click();
   const readingSurface = page.getByLabel('Leesweergave').first();
   await expect(readingSurface).toBeVisible();
   await expect
@@ -276,7 +277,8 @@ test('tooltips en tekst-hoverinspectie volgen het prototype', async ({ page }, t
   await page.waitForTimeout(350);
   await expect(preview).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Sessie', exact: true }).click();
+  await page.getByRole('button', { name: 'Sessies', exact: true }).click();
+  await page.getByRole('button', { name: 'Bewerken', exact: true }).first().click();
   const nodeReference = page
     .getByRole('textbox', { name: 'Teksteditor' })
     .first()

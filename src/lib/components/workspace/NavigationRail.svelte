@@ -7,7 +7,6 @@
   const items: { key: ViewName; labelKey: string; icon: string }[] = [
     { key: 'graph', labelKey: 'navigation.graph', icon: 'graph' },
     { key: 'session', labelKey: 'navigation.session', icon: 'session' },
-    { key: 'story', labelKey: 'navigation.story', icon: 'story' },
     { key: 'atlas', labelKey: 'navigation.atlas', icon: 'atlas' }
   ];
 </script>
@@ -66,7 +65,7 @@
       width: auto;
       height: calc(var(--mobile-navigation-height, 54px) + env(safe-area-inset-bottom));
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 4px;
       padding: 5px max(6px, env(safe-area-inset-right)) calc(5px + env(safe-area-inset-bottom))
         max(6px, env(safe-area-inset-left));

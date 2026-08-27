@@ -10,7 +10,6 @@
   import ConnectionModal from '$lib/components/node/ConnectionModal.svelte';
   import CreateNodeModal from '$lib/components/node/CreateNodeModal.svelte';
   import NodeDossier from '$lib/components/node/NodeDossier.svelte';
-  import SessionEditor from '$lib/components/session/SessionEditor.svelte';
   import StoryView from '$lib/components/session/StoryView.svelte';
   import ContextMenu, { type MenuItem } from '$lib/components/ui/ContextMenu.svelte';
   import HistoryModal from '$lib/components/workspace/HistoryModal.svelte';
@@ -60,6 +59,7 @@
   let explorerTap: { id: string; at: number } | null = null;
   // svelte-ignore state_referenced_locally -- initial selection is recalculated after mutations
   let sessionId = $state(snapshot.sessions.find((item) => !item.trashedAt)?.id ?? '');
+  let sessionEditing = $state(false);
   let createState = $state<{
     title: string;
     x: number;
@@ -127,16 +127,8 @@
   let popoverNode = $derived(popover ? nodeMap.get(popover) : undefined);
   let previewNodeEntry = $derived(previewId ? nodeMap.get(previewId) : undefined);
   let dossierNode = $derived(dossier ? nodeMap.get(dossier) : undefined);
-  let currentSession = $derived(
-    snapshot.sessions.find((session) => session.id === sessionId) ?? null
-  );
-  let scratch = $derived(
-    currentSession
-      ? snapshot.scratch.find((item) => item.sessionId === currentSession.id)
-      : undefined
-  );
   let typeMap = $derived(new Map(snapshot.nodeTypes.map((type) => [type.key, type])));
-  const workspaceViews = new Set<ViewName>(['graph', 'session', 'story', 'atlas']);
+  const workspaceViews = new Set<ViewName>(['graph', 'session', 'atlas']);
   const workspacePanels = new Set<PanelName>(['explorer', 'recent', 'search', 'settings']);
   const dossierTabs = new Set<NodeDossierTab>(['overview', 'map', 'relations', 'story']);
   const campaignSettingsTabs = new Set<CampaignSettingsTab>(['general', 'members', 'rights']);
@@ -307,8 +299,15 @@
     recent = [id, ...recent.filter((item) => item !== id)].slice(0, 20);
   }
   function restoreWorkspaceUrl(url: URL) {
-    const requestedView = url.searchParams.get('view') as ViewName | null;
-    view = requestedView && workspaceViews.has(requestedView) ? requestedView : 'graph';
+    const requestedView = url.searchParams.get('view');
+    view =
+      requestedView === 'story'
+        ? 'session'
+        : workspaceViews.has(requestedView as ViewName)
+          ? (requestedView as ViewName)
+          : 'graph';
+    sessionEditing =
+      view === 'session' && requestedView !== 'story' && url.searchParams.get('mode') !== 'read';
     const requestedPanel = url.searchParams.get('panel') as PanelName | null;
     panel = requestedPanel && workspacePanels.has(requestedPanel) ? requestedPanel : 'explorer';
     if (requestedPanel && workspacePanels.has(requestedPanel)) panelOpen = true;
@@ -346,15 +345,20 @@
       view?: ViewName;
       panel?: PanelName;
       sessionId?: string;
+      sessionEditing?: boolean;
       dossier?: string | null;
       nodeTab?: NodeDossierTab;
       campaignSettings?: CampaignSettingsTab | null;
     },
     replace = false
   ) {
-    if (next.view) view = next.view;
+    if (next.view) {
+      view = next.view;
+      if (next.view !== 'session') sessionEditing = false;
+    }
     if (next.panel) panel = next.panel;
     if (next.sessionId !== undefined) sessionId = next.sessionId;
+    if (next.sessionEditing !== undefined) sessionEditing = next.sessionEditing;
     if (next.dossier !== undefined) {
       if (dossier !== next.dossier) nodeTab = 'overview';
       dossier = next.dossier;
@@ -370,6 +374,8 @@
     else url.searchParams.set('panel', panel);
     if (sessionId) url.searchParams.set('session', sessionId);
     else url.searchParams.delete('session');
+    if (view === 'session') url.searchParams.set('mode', sessionEditing ? 'write' : 'read');
+    else url.searchParams.delete('mode');
     if (dossier) url.searchParams.set('node', dossier);
     else url.searchParams.delete('node');
     if (dossier && nodeTab !== 'overview') url.searchParams.set('nodeTab', nodeTab);
@@ -954,7 +960,12 @@
     newSessionTitle = '';
     newSessionDate = '';
     await refresh();
-    navigateWorkspace({ view: 'session', sessionId: result.id, dossier: null });
+    navigateWorkspace({
+      view: 'session',
+      sessionId: result.id,
+      sessionEditing: true,
+      dossier: null
+    });
   }
   async function saveCampaign(value: Record<string, unknown>) {
     await api(`/api/campaigns/${snapshot.campaign.id}`, {
@@ -1027,7 +1038,7 @@
     <NavigationRail
       {view}
       pick={(next) => {
-        navigateWorkspace({ view: next, dossier: null });
+        navigateWorkspace({ view: next, sessionEditing: false, dossier: null });
       }}
     /><ExplorerPanel
       open={panelOpen}
@@ -1115,125 +1126,114 @@
             canLink={can('link')}
             canReveal={can('reveal')}
           />{/if}
-      {:else if view === 'session'}{#key currentSession?.id}<SessionEditor
-            session={currentSession}
-            sessions={snapshot.sessions}
-            {scratch}
-            nodes={snapshot.nodes}
-            links={snapshot.links}
-            types={snapshot.nodeTypes}
-            posts={snapshot.posts}
-            currentUserName={snapshot.currentUser.name}
-            liveBody={currentSession ? realtimeDrafts[currentSession.id]?.body : undefined}
-            liveUser={currentSession ? realtimeDrafts[currentSession.id]?.userName : undefined}
-            liveCursors={currentSession
-              ? Object.values(realtimeCursors[currentSession.id] ?? {})
-              : []}
-            canWrite={can('write')}
-            canStart={can('session')}
-            canHistory={can('history')}
-            canDelete={can('delete')}
-            canLink={can('link')}
-            {openNode}
-            {previewNode}
-            createMention={mentionCreate}
-            pick={(id) => navigateWorkspace({ view: 'session', sessionId: id, dossier: null })}
-            save={async (sessionId, value, keepalive = false) => {
-              const url = `/api/campaigns/${snapshot.campaign.id}/sessions/${sessionId}`;
-              if (
-                keepalive &&
-                navigator.sendBeacon(
-                  url,
-                  new Blob([JSON.stringify(value)], { type: 'application/json' })
-                )
-              )
-                return;
-              const updated = await api<SessionEntry>(url, {
-                method: 'PATCH',
-                body: JSON.stringify(value),
-                keepalive
-              });
-              const { [sessionId]: _persistedDraft, ...remainingDrafts } = realtimeDrafts;
-              realtimeDrafts = remainingDrafts;
-              snapshot = {
-                ...snapshot,
-                sessions: snapshot.sessions.map((item) => (item.id === updated.id ? updated : item))
-              };
-            }}
-            onLiveBody={broadcastSessionBody}
-            onLiveCursor={broadcastSessionCursor}
-            saveScratch={async (sessionId, body, keepalive = false) => {
-              const url = `/api/campaigns/${snapshot.campaign.id}/sessions/${sessionId}/scratch`;
-              const payload = { body };
-              if (
-                keepalive &&
-                navigator.sendBeacon(
-                  url,
-                  new Blob([JSON.stringify(payload)], { type: 'application/json' })
-                )
-              )
-                return;
-              await api(url, {
-                method: 'PUT',
-                body: JSON.stringify(payload),
-                keepalive
-              });
-              snapshot = {
-                ...snapshot,
-                scratch: [
-                  ...snapshot.scratch.filter(
-                    (item) =>
-                      item.sessionId !== sessionId || item.userId !== snapshot.currentUser.id
-                  ),
-                  { sessionId, userId: snapshot.currentUser.id, body }
-                ]
-              };
-            }}
-            createSession={() => (sessionCreate = true)}
-            trash={async () => {
-              if (currentSession) {
-                await api(`/api/campaigns/${snapshot.campaign.id}/sessions/${currentSession.id}`, {
-                  method: 'PATCH',
-                  body: JSON.stringify({ trashed: true })
-                });
-                await refresh();
-                navigateWorkspace(
-                  {
-                    view: 'session',
-                    sessionId: snapshot.sessions.find((item) => !item.trashedAt)?.id ?? '',
-                    dossier: null
-                  },
-                  true
-                );
-              }
-            }}
-            history={() => {
-              if (currentSession)
-                history = {
-                  type: 'session',
-                  id: currentSession.id,
-                  title: currentSession.title,
-                  body: currentSession.body
-                };
-            }}
-            {connect}
-            {showContext}
-            {showNodeContext}
-          />{/key}
-      {:else if view === 'story'}<StoryView
+      {:else if view === 'session'}<StoryView
           sessions={snapshot.sessions}
           scratch={snapshot.scratch}
           nodes={snapshot.nodes}
           types={snapshot.nodeTypes}
           currentUserName={snapshot.currentUser.name}
+          editingSessionId={sessionEditing ? sessionId : null}
+          liveBodies={Object.fromEntries(
+            Object.entries(realtimeDrafts).map(([id, draft]) => [id, draft.body])
+          )}
+          liveUsers={Object.fromEntries(
+            Object.entries(realtimeDrafts).map(([id, draft]) => [id, draft.userName])
+          )}
           liveCursors={Object.fromEntries(
             Object.entries(realtimeCursors).map(([id, cursors]) => [id, Object.values(cursors)])
           )}
+          canWrite={can('write')}
+          canStart={can('session')}
+          canHistory={can('history')}
+          canDelete={can('delete')}
           {openNode}
           {previewNode}
-          openSession={(id) => {
-            navigateWorkspace({ view: 'session', sessionId: id, dossier: null });
+          createMention={mentionCreate}
+          editSession={(id) => {
+            navigateWorkspace({
+              view: 'session',
+              sessionId: id,
+              sessionEditing: true,
+              dossier: null
+            });
           }}
+          closeEditor={() => navigateWorkspace({ sessionEditing: false })}
+          createSession={() => (sessionCreate = true)}
+          save={async (sessionId, value, keepalive = false) => {
+            const url = `/api/campaigns/${snapshot.campaign.id}/sessions/${sessionId}`;
+            if (
+              keepalive &&
+              navigator.sendBeacon(
+                url,
+                new Blob([JSON.stringify(value)], { type: 'application/json' })
+              )
+            )
+              return;
+            const updated = await api<SessionEntry>(url, {
+              method: 'PATCH',
+              body: JSON.stringify(value),
+              keepalive
+            });
+            const { [sessionId]: _persistedDraft, ...remainingDrafts } = realtimeDrafts;
+            realtimeDrafts = remainingDrafts;
+            snapshot = {
+              ...snapshot,
+              sessions: snapshot.sessions.map((item) => (item.id === updated.id ? updated : item))
+            };
+          }}
+          saveScratch={async (sessionId, body, keepalive = false) => {
+            const url = `/api/campaigns/${snapshot.campaign.id}/sessions/${sessionId}/scratch`;
+            const payload = { body };
+            if (
+              keepalive &&
+              navigator.sendBeacon(
+                url,
+                new Blob([JSON.stringify(payload)], { type: 'application/json' })
+              )
+            )
+              return;
+            await api(url, {
+              method: 'PUT',
+              body: JSON.stringify(payload),
+              keepalive
+            });
+            snapshot = {
+              ...snapshot,
+              scratch: [
+                ...snapshot.scratch.filter(
+                  (item) => item.sessionId !== sessionId || item.userId !== snapshot.currentUser.id
+                ),
+                { sessionId, userId: snapshot.currentUser.id, body }
+              ]
+            };
+          }}
+          onLiveBody={broadcastSessionBody}
+          onLiveCursor={broadcastSessionCursor}
+          history={(session) => {
+            history = {
+              type: 'session',
+              id: session.id,
+              title: session.title,
+              body: session.body
+            };
+          }}
+          trash={async (session) => {
+            await api(`/api/campaigns/${snapshot.campaign.id}/sessions/${session.id}`, {
+              method: 'PATCH',
+              body: JSON.stringify({ trashed: true })
+            });
+            await refresh();
+            navigateWorkspace(
+              {
+                sessionId: snapshot.sessions.find((item) => !item.trashedAt)?.id ?? '',
+                sessionEditing: false,
+                dossier: null
+              },
+              true
+            );
+          }}
+          {showContext}
+          {showNodeContext}
         />
       {:else}<AtlasMap
           campaign={snapshot.campaign}
@@ -1273,7 +1273,12 @@
             {openNode}
             {previewNode}
             openSession={(id) => {
-              navigateWorkspace({ view: 'session', sessionId: id, dossier: null });
+              navigateWorkspace({
+                view: 'session',
+                sessionId: id,
+                sessionEditing: false,
+                dossier: null
+              });
             }}
             saveNode={(value) => patchNode(dossierNode.id, value)}
             saveDescription={async (body) => {

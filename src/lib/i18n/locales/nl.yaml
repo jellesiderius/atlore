@@ -193,7 +193,7 @@ campaign:
 navigation:
   label: Hoofdweergaven
   graph: Graph
-  session: Sessie
+  session: Sessies
   story: Verhaal
   atlas: Kaart
 workspace:
@@ -333,6 +333,8 @@ session:
   newEyebrow: Een nieuw hoofdstuk
   titlePlaceholder: Sessie {{number}} · Titel
   start: Sessie starten
+  new: Nieuwe sessie
+  read: Lezen
   title: Sessietitel
   notesForMentions: Notities bij genoemde nodes
   scratch: Persoonlijk sessieklad

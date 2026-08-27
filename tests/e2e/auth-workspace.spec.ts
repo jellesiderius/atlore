@@ -134,6 +134,12 @@ test('inloggen en door de Atlore-workspace navigeren', async ({ page }) => {
   await page.getByText('Ember & Rust', { exact: true }).first().click();
   await expect(page.getByRole('navigation', { name: 'Hoofdweergaven' })).toBeVisible();
   await expect(page.getByLabel('Interactieve kennisgraaf')).toBeVisible();
-  await page.getByRole('button', { name: 'Sessie', exact: true }).click();
+  await page.getByRole('button', { name: 'Sessies', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Aan tafel verteld' })).toBeVisible();
+  await page.getByRole('button', { name: 'Bewerken', exact: true }).first().click();
+  await expect(page.getByLabel('Sessietitel')).toHaveValue('Een lege stoel');
+  await page.getByRole('button', { name: 'Terug naar campagnes' }).click();
+  await expect(page).toHaveURL(/\/campaigns$/);
+  await page.goBack();
   await expect(page.getByLabel('Sessietitel')).toHaveValue('Een lege stoel');
 });
