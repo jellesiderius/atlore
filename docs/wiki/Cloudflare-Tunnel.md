@@ -39,15 +39,48 @@ The token is the value after `--token` in Cloudflare's generated Docker command.
 
 ## 2. Add the published application
 
-Add one published application route to the tunnel:
+On the **Route tunnel** screen, select **Published applications** and add one route. Cloudflare splits the public hostname and origin service into separate fields; fill them in as follows:
 
-| Setting     | Value                |
-| ----------- | -------------------- |
-| Type        | HTTP                 |
-| Hostname    | `atlore.example.com` |
-| Service URL | `http://app:3000`    |
+| Cloudflare field          | Value                                                |
+| ------------------------- | ---------------------------------------------------- |
+| Hostname                  | `atlore`                                             |
+| Domain                    | your Cloudflare domain, for example `example.com`    |
+| Path                      | leave completely empty so every Atlore route matches |
+| Service → Type            | **HTTP** — not HTTPS                                 |
+| Service → URL after `://` | `app:3000`                                           |
 
-Use `app`, not `localhost`, because `cloudflared` runs in its own container and reaches Atlore through Docker service discovery. The public side is still HTTPS.
+The resulting public hostname is `atlore.example.com` and the complete internal service URL is `http://app:3000`. Do not enter `http://` again in the URL field when the Type selector already shows it.
+
+Use `app`, not `localhost`, because `cloudflared` runs in its own container and reaches Atlore through Docker service discovery. Although the internal service type is HTTP, visitors still use public HTTPS because Cloudflare terminates TLS at the edge.
+
+For an `atlore.example.com` setup, the exact values are:
+
+```text
+Hostname:     atlore
+Domain:       example.com
+Path:         [empty]
+Service type: HTTP
+Service URL:  app:3000
+```
+
+After selecting **Add route**, use this matching Atlore configuration in `.env`:
+
+```dotenv
+ORIGIN=https://atlore.example.com
+HOST_BIND_ADDRESS=127.0.0.1
+CLOUDFLARED_TUNNEL_TOKEN=paste-the-token-from-the-connector-step-here
+CLOUDFLARED_PROTOCOL=auto
+```
+
+Then start it from the Atlore repository root:
+
+```bash
+make tunnel-check
+make tunnel-up
+make tunnel-status
+```
+
+Open `https://atlore.example.com`. If the tunnel still shows **Inactive** for a short moment, run `make tunnel-logs` and wait until the connector reports a registered connection.
 
 Do not add routes for PostgreSQL, Redis, the MinIO API, or the MinIO console.
 

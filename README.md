@@ -265,7 +265,7 @@ Without S3 configuration, Atlore falls back to `STORAGE_PATH`. Without Redis, on
 <details>
 <summary><strong>Cloudflare Tunnel</strong></summary>
 
-Atlore includes an optional Docker Compose profile for a remotely-managed Cloudflare Tunnel. Create a named tunnel and published application in Cloudflare, route its public hostname to `http://app:3000`, and set these values in `.env`:
+Atlore includes an optional Docker Compose profile for a remotely-managed Cloudflare Tunnel. Create a named tunnel and published application in Cloudflare, route its public hostname to `http://app:3000` (select **HTTP** and enter **`app:3000`** when Cloudflare shows separate fields), and set these values in `.env`:
 
 ```dotenv
 ORIGIN=https://atlore.example.com
