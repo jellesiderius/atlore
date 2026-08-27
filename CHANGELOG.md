@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- Image and map uploads within `MAX_UPLOAD_MB` are no longer rejected by adapter-node's much smaller default request-body limit.
+
 ## [1.2.0] - 2026-08-27
 
 ### Added

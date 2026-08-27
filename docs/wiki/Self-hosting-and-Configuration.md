@@ -63,7 +63,7 @@ Open `http://localhost:5173`. PostgreSQL is exposed on port `55432`, Redis on `6
 | `REDIS_URL`         | Redis connection used outside Docker.                                |
 | `REALTIME_SECRET`   | HMAC secret for short-lived realtime tokens; at least 32 characters. |
 | `SESSION_TTL_DAYS`  | Session lifetime in days.                                            |
-| `MAX_UPLOAD_MB`     | Maximum image upload size.                                           |
+| `MAX_UPLOAD_MB`     | Maximum image upload size; the HTTP body allowance follows it.       |
 | `STORAGE_PATH`      | Local upload directory when S3 is not configured.                    |
 | `S3_*`              | S3-compatible endpoint, region, bucket, and credentials.             |
 | `SMTP_*`            | Email delivery for invitations and password recovery.                |

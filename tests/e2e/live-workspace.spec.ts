@@ -3,15 +3,17 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 const PNG =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 
-async function dropPng(page: Page, target: Locator, name: string) {
+async function dropPng(page: Page, target: Locator, name: string, size = 0) {
   const transfer = await page.evaluateHandle(
     (value) => {
-      const bytes = Uint8Array.from(atob(value.png), (character) => character.charCodeAt(0));
+      const png = Uint8Array.from(atob(value.png), (character) => character.charCodeAt(0));
+      const bytes = new Uint8Array(Math.max(png.length, value.size));
+      bytes.set(png);
       const transfer = new DataTransfer();
       transfer.items.add(new File([bytes], value.name, { type: 'image/png' }));
       return transfer;
     },
-    { png: PNG, name }
+    { png: PNG, name, size }
   );
   expect(
     await page.evaluate(
@@ -79,7 +81,7 @@ test('node-mentions verversen de graph direct en de kaartknop uploadt echt', asy
   try {
     await page.goto(`/campaigns/${world.campaignId}?node=${world.sourceId}`);
     const dossier = page.locator('.dossier');
-    await dropPng(page, dossier.locator('.hero'), 'bronburcht.png');
+    await dropPng(page, dossier.locator('.hero'), 'bronburcht.png', 768 * 1024);
     await expect(dossier.getByRole('img', { name: 'Bronburcht' })).toBeVisible({ timeout: 5_000 });
 
     await page.goto(`/campaigns/${world.campaignId}?node=${world.sourceId}&nodeTab=map`);
@@ -117,7 +119,8 @@ test('node-mentions verversen de graph direct en de kaartknop uploadt echt', asy
     await dropPng(
       page,
       page.getByRole('application', { name: 'Interactieve campagnekaart' }),
-      'atlore-testkaart.png'
+      'atlore-testkaart.png',
+      768 * 1024
     );
     await expect(page.getByRole('img', { name: `Kaart van ${world.title}` })).toBeVisible({
       timeout: 5_000

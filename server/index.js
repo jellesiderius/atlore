@@ -1,7 +1,12 @@
 import 'dotenv/config';
 import { createServer } from 'node:http';
-import { handler } from '../build/handler.js';
 import { attachRealtime } from './realtime.js';
+import { ensureUploadBodySizeLimit } from './upload-limits.js';
+
+// adapter-node reads BODY_SIZE_LIMIT while its handler module is imported. Set
+// Atlore's upload-aware lower bound first so valid images reach /api/media.
+ensureUploadBodySizeLimit();
+const { handler } = await import('../build/handler.js');
 
 const port = Number(process.env.PORT || 3000);
 const server = createServer(handler);

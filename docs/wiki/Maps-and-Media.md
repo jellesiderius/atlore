@@ -4,7 +4,7 @@ Atlore supports a main campaign map, maps attached to place nodes, node images, 
 
 ## Supported uploads
 
-Image inputs accept the formats configured by the application, with a default maximum size of 12 MB. A self-hosting administrator can change the limit with `MAX_UPLOAD_MB`.
+Image inputs accept the formats configured by the application, with a default maximum size of 12 MB. A self-hosting administrator can change the limit with `MAX_UPLOAD_MB`. Atlore automatically keeps adapter-node's request-body allowance above this value, including enough room for multipart upload metadata.
 
 You can select a file with the upload control or drag an image directly onto the relevant image or map area.
 

@@ -35,6 +35,8 @@ Normal saves still use HTTP, but realtime invalidation between users and instanc
 4. Confirm MinIO/S3 is healthy and credentials match.
 5. Keep the storage bucket private; access should flow through Atlore.
 
+Atlore derives adapter-node's request-body allowance from `MAX_UPLOAD_MB`, so an image within the configured limit should never produce the generic **Payload too large** response. Rebuild or recreate the application container after changing this value.
+
 ## Graph force settings do not save
 
 Only users with **Change settings** permission can update campaign-wide graph forces. Wait for the **Saved** status, then reload the page. If it fails, inspect the campaign PATCH request and application logs.
