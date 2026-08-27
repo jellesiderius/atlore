@@ -114,7 +114,8 @@
   let visibleWith = $state([...node.visibleWith]);
   let relationQuery = $state('');
   let busy = $state(false);
-  let saved = $state('');
+  let descriptionStatus = $state('');
+  let noteStatus = $state('');
   let uploadError = $state('');
   let currentUser = $derived(members.find((member) => member.id === currentUserId));
   let related = $derived(
@@ -144,6 +145,22 @@
   let noteBody = $state<Paragraph[]>(node.note);
   let dirtyDescription = $state(false);
   let dirtyNote = $state(false);
+  let descriptionRevision = 0;
+  let noteRevision = 0;
+  let descriptionStatusTimer: ReturnType<typeof setTimeout> | undefined;
+  let noteStatusTimer: ReturnType<typeof setTimeout> | undefined;
+  let displayedDescriptionStatus = $derived(
+    liveUser && !dirtyDescription ? t('node.liveUpdate', { name: liveUser }) : descriptionStatus
+  );
+  let displayedDescriptionStatusTone = $derived<'live' | 'saving' | 'error' | 'saved'>(
+    liveUser && !dirtyDescription
+      ? 'live'
+      : descriptionStatus === t('common.saving')
+        ? 'saving'
+        : descriptionStatus === t('errors.saveFailed')
+          ? 'error'
+          : 'saved'
+  );
   $effect(() => {
     if (dirtyDescription) return;
     const incoming = liveBody ?? node.description;
@@ -154,36 +171,60 @@
     if (dirtyNote) return;
     if (JSON.stringify(node.note) !== JSON.stringify(noteBody)) noteBody = normalizeBody(node.note);
   });
-  const saveBody = debounce(async (body: Paragraph[]) => {
+  const saveBody = debounce(async (body: Paragraph[], revision: number) => {
     try {
       await saveDescription(body);
-      saved = t('node.saved');
-      setTimeout(() => (saved = ''), 1800);
-    } finally {
+      if (revision !== descriptionRevision) return;
       dirtyDescription = false;
+      flashDescription(revision);
+    } catch {
+      if (revision === descriptionRevision) descriptionStatus = t('errors.saveFailed');
     }
   }, 350);
-  const saveNoteBody = debounce(async (body: Paragraph[]) => {
+  const saveNoteBody = debounce(async (body: Paragraph[], revision: number) => {
     try {
       await saveNote(body);
-      saved = t('node.saved');
-      setTimeout(() => (saved = ''), 1800);
-    } finally {
+      if (revision !== noteRevision) return;
       dirtyNote = false;
+      flashNote(revision);
+    } catch {
+      if (revision === noteRevision) noteStatus = t('errors.saveFailed');
     }
   }, 400);
   function descriptionChanged(body: Paragraph[]) {
+    const revision = ++descriptionRevision;
     descriptionBody = body;
     dirtyDescription = true;
     onLiveBody?.(node.id, body);
-    saveBody(body);
+    clearTimeout(descriptionStatusTimer);
+    descriptionStatus = t('common.saving');
+    saveBody(body, revision);
   }
   function noteChanged(body: Paragraph[]) {
+    const revision = ++noteRevision;
     noteBody = body;
     dirtyNote = true;
-    saveNoteBody(body);
+    clearTimeout(noteStatusTimer);
+    noteStatus = t('common.saving');
+    saveNoteBody(body, revision);
+  }
+  function flashDescription(revision: number) {
+    clearTimeout(descriptionStatusTimer);
+    descriptionStatus = t('node.saved');
+    descriptionStatusTimer = setTimeout(() => {
+      if (revision === descriptionRevision) descriptionStatus = '';
+    }, 1800);
+  }
+  function flashNote(revision: number) {
+    clearTimeout(noteStatusTimer);
+    noteStatus = t('node.saved');
+    noteStatusTimer = setTimeout(() => {
+      if (revision === noteRevision) noteStatus = '';
+    }, 1800);
   }
   onDestroy(() => {
+    clearTimeout(descriptionStatusTimer);
+    clearTimeout(noteStatusTimer);
     onLiveCursor?.(node.id, null);
     void saveBody.flush();
     void saveNoteBody.flush();
@@ -192,7 +233,6 @@
     busy = true;
     try {
       await saveNode({ title, summary, type, revealed, visibility, visibleWith });
-      saved = t('node.saved');
     } finally {
       busy = false;
     }
@@ -334,11 +374,7 @@
       <div class="description-head">
         <div>
           <div class="eyebrow">{t('node.globalDescription')}</div>
-          <small
-            >{liveUser && !dirtyDescription
-              ? t('node.liveUpdate', { name: liveUser })
-              : saved || t('node.mentionHint')}</small
-          >
+          <small>{t('node.mentionHint')}</small>
         </div>
         <span class="shared"><Icon name="users" size={14} />{t('node.sharedAtTable')}</span>
       </div>
@@ -354,6 +390,8 @@
         {openNode}
         {previewNode}
         createNode={createMention}
+        surfaceStatus={displayedDescriptionStatus}
+        surfaceStatusTone={displayedDescriptionStatusTone}
         {showContext}
         {showNodeContext}
       />
@@ -380,6 +418,12 @@
           {openNode}
           {previewNode}
           createNode={createMention}
+          surfaceStatus={noteStatus}
+          surfaceStatusTone={noteStatus === t('common.saving')
+            ? 'saving'
+            : noteStatus === t('errors.saveFailed')
+              ? 'error'
+              : 'saved'}
           {showContext}
           {showNodeContext}
         />

@@ -5,11 +5,15 @@
     mode,
     label,
     compact = false,
+    status = '',
+    statusTone = 'neutral',
     children
   }: {
     mode: 'write' | 'read';
     label: string;
     compact?: boolean;
+    status?: string;
+    statusTone?: 'neutral' | 'saving' | 'saved' | 'error' | 'live';
     children: import('svelte').Snippet;
   } = $props();
 </script>
@@ -21,10 +25,11 @@
   class:compact
   aria-label={label}
 >
-  <div class="mode-bar" aria-hidden="true">
-    <span><Icon name={mode === 'write' ? 'edit' : 'eye'} size={12} /></span>
+  <div class="mode-bar">
+    <span aria-hidden="true"><Icon name={mode === 'write' ? 'edit' : 'eye'} size={12} /></span>
     <b>{label}</b>
     <i></i>
+    {#if status}<small role="status" aria-live="polite" data-tone={statusTone}>{status}</small>{/if}
   </div>
   <div class="surface-content">{@render children()}</div>
 </section>
@@ -99,6 +104,20 @@
       color-mix(in srgb, var(--surface-accent) 20%, transparent),
       transparent
     );
+  }
+  .mode-bar small {
+    flex: 0 0 auto;
+    color: var(--text-3);
+    font: 9px var(--font-mono);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .mode-bar small[data-tone='saving'],
+  .mode-bar small[data-tone='live'] {
+    color: var(--surface-accent);
+  }
+  .mode-bar small[data-tone='error'] {
+    color: var(--danger);
   }
   .surface-content {
     padding: 15px 17px 17px;

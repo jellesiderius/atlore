@@ -113,6 +113,66 @@ test('sessietekst slaat ook bij direct wisselen op en blijft lokaal actueel', as
   }
 });
 
+test('de cursor blijft na een @-link en een inkomende save op zijn positie', async ({ page }) => {
+  const workspace = await createWorkspace(page);
+
+  try {
+    await page.goto(
+      `/campaigns/${workspace.campaignId}?view=session&session=${workspace.sessionId}`
+    );
+    const editor = page.getByRole('textbox', { name: 'Teksteditor' }).first();
+    await expect(editor).toBeEditable();
+    const writingSurface = editor.locator(
+      'xpath=ancestor::section[contains(@class, "text-surface")]'
+    );
+
+    await editor.fill('Voor ');
+    await editor.pressSequentially('@Navigatieheld');
+    await page.getByRole('listbox').getByText('Navigatieheld', { exact: true }).click();
+    await editor.pressSequentially(' loopt verder');
+
+    await expect(editor.locator('[data-ref]')).toHaveText('Navigatieheld');
+    await expect(writingSurface.getByRole('status')).toHaveText('Opslaan…');
+    await expect(writingSurface.getByRole('status')).toHaveText('Opgeslagen', {
+      timeout: 4_000
+    });
+
+    await editor.press('End');
+    const refreshed = page.waitForResponse(
+      (response) =>
+        response.url().includes(`/campaigns/${workspace.campaignId}/workspace`) &&
+        response.request().method() === 'GET' &&
+        response.ok()
+    );
+    await page.evaluate(async ({ campaignId, sessionId, nodeId }) => {
+      const body = [
+        {
+          segs: [
+            { t: 'txt', v: 'Vo' },
+            { t: 'txt', v: 'or ' },
+            { t: 'ref', id: nodeId },
+            { t: 'txt', v: '\u00a0 loopt verder' }
+          ]
+        }
+      ];
+      const response = await fetch(`/api/campaigns/${campaignId}/sessions/${sessionId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ body })
+      });
+      if (!response.ok) throw new Error(await response.text());
+    }, workspace);
+    await refreshed;
+    await page.waitForTimeout(100);
+    await page.keyboard.type(' EIND');
+
+    await expect(editor).toContainText('Voor Navigatieheld loopt verder EIND');
+    await expect(editor).not.toHaveText(/^EIND/);
+  } finally {
+    await removeWorkspace(page, workspace.campaignId);
+  }
+});
+
 test('werkruimte, sessie en dossier werken met browser back, forward en URL-herstel', async ({
   page
 }, testInfo) => {

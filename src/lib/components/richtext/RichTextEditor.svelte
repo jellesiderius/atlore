@@ -16,6 +16,8 @@
     readonly = false,
     compact = false,
     surfaceLabel = '',
+    surfaceStatus = '',
+    surfaceStatusTone = 'neutral',
     ariaLabel = '',
     onChange,
     openNode,
@@ -33,6 +35,8 @@
     readonly?: boolean;
     compact?: boolean;
     surfaceLabel?: string;
+    surfaceStatus?: string;
+    surfaceStatusTone?: 'neutral' | 'saving' | 'saved' | 'error' | 'live';
     ariaLabel?: string;
     onChange?: (body: Paragraph[]) => void;
     openNode?: (id: string) => void;
@@ -89,6 +93,7 @@
   });
 
   function render(value: Paragraph[]) {
+    const selection = captureSelection();
     editor.replaceChildren();
     for (const paragraph of value) {
       const element = document.createElement('div');
@@ -100,6 +105,83 @@
       editor.append(element);
     }
     lastExternal = JSON.stringify(value);
+    restoreSelection(selection);
+  }
+
+  type SelectionSnapshot = { start: number; end: number };
+  type SelectionPoint = { node: Node; offset: number };
+
+  function captureSelection(): SelectionSnapshot | null {
+    const selection = document.getSelection();
+    if (
+      document.activeElement !== editor ||
+      !selection?.rangeCount ||
+      !selection.anchorNode ||
+      !selection.focusNode ||
+      !editor.contains(selection.anchorNode) ||
+      !editor.contains(selection.focusNode)
+    )
+      return null;
+
+    const range = selection.getRangeAt(0);
+    return {
+      start: textOffset(range.startContainer, range.startOffset),
+      end: textOffset(range.endContainer, range.endOffset)
+    };
+  }
+
+  function textOffset(node: Node, offset: number): number {
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    range.setEnd(node, offset);
+    return range.cloneContents().textContent?.length ?? 0;
+  }
+
+  function restoreSelection(snapshot: SelectionSnapshot | null) {
+    if (!snapshot) return;
+    editor.focus({ preventScroll: true });
+    const start = pointAtOffset(snapshot.start);
+    const end = pointAtOffset(snapshot.end);
+    const range = document.createRange();
+    range.setStart(start.node, start.offset);
+    range.setEnd(end.node, end.offset);
+    const selection = document.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    queueMicrotask(reportCursor);
+  }
+
+  function pointAtOffset(offset: number): SelectionPoint {
+    let remaining = Math.max(0, offset);
+
+    const visit = (parent: Node): SelectionPoint | null => {
+      for (let index = 0; index < parent.childNodes.length; index++) {
+        const child = parent.childNodes[index];
+        if (child.nodeType === Node.TEXT_NODE) {
+          const length = child.textContent?.length ?? 0;
+          if (remaining <= length) return { node: child, offset: remaining };
+          remaining -= length;
+          continue;
+        }
+        if (!(child instanceof HTMLElement)) continue;
+        if (child.dataset.ref) {
+          const length = child.textContent?.length ?? 0;
+          if (remaining === 0) return { node: parent, offset: index };
+          if (remaining <= length) return { node: parent, offset: index + 1 };
+          remaining -= length;
+          continue;
+        }
+        if (child instanceof HTMLBRElement) {
+          if (remaining === 0) return { node: parent, offset: index };
+          continue;
+        }
+        const point = visit(child);
+        if (point) return point;
+      }
+      return null;
+    };
+
+    return visit(editor) ?? { node: editor, offset: editor.childNodes.length };
   }
 
   function chip(id: string) {
@@ -485,6 +567,8 @@
 <TextSurface
   mode={readonly ? 'read' : 'write'}
   label={surfaceLabel || t(readonly ? 'editor.readSurface' : 'editor.writeSurface')}
+  status={surfaceStatus}
+  statusTone={surfaceStatusTone}
   {compact}
 >
   <div class="editor-shell" bind:this={editorShell}>

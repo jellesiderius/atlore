@@ -88,7 +88,8 @@
   let title = $state(session?.title ?? '');
   // svelte-ignore state_referenced_locally -- the keyed session editor owns its edit buffer
   let worldDate = $state(session?.worldDate ?? '');
-  let saved = $state('');
+  let bodyStatus = $state('');
+  let noteStatus = $state('');
   // svelte-ignore state_referenced_locally -- the keyed session editor owns its edit buffer
   let sessionBody = $state<Paragraph[]>(session?.body ?? [{ segs: [{ t: 'txt', v: '' }] }]);
   // svelte-ignore state_referenced_locally -- the keyed session editor owns its edit buffer
@@ -105,8 +106,21 @@
   let dirtyBody = $state(false);
   let dirtyNotes = $state(false);
   let dirtyHeader = $state(false);
+  let bodyRevision = 0;
+  let noteRevision = 0;
+  let bodyStatusTimer: ReturnType<typeof setTimeout> | undefined;
+  let noteStatusTimer: ReturnType<typeof setTimeout> | undefined;
   let displayedStatus = $derived(
-    liveUser && !dirtyBody ? t('session.liveUpdate', { name: liveUser }) : saved
+    liveUser && !dirtyBody ? t('session.liveUpdate', { name: liveUser }) : bodyStatus
+  );
+  let displayedStatusTone = $derived<'live' | 'saving' | 'error' | 'saved'>(
+    liveUser && !dirtyBody
+      ? 'live'
+      : bodyStatus === t('common.saving')
+        ? 'saving'
+        : bodyStatus === t('errors.saveFailed')
+          ? 'error'
+          : 'saved'
   );
   let mounted = false;
   $effect(() => {
@@ -121,47 +135,70 @@
     title = session.title;
     worldDate = session.worldDate;
   });
-  const saveBody = debounce(async (body: Paragraph[]) => {
+  const saveBody = debounce(async (body: Paragraph[], revision: number) => {
     if (!ownedSessionId) return;
-    await save(ownedSessionId, { body }, keepalive);
-    dirtyBody = false;
-    syncUnloadGuard();
-    flash();
+    try {
+      await save(ownedSessionId, { body }, keepalive);
+      if (revision !== bodyRevision) return;
+      dirtyBody = false;
+      syncUnloadGuard();
+      flashBody(revision);
+    } catch {
+      if (revision === bodyRevision) bodyStatus = t('errors.saveFailed');
+    }
   }, 350);
-  const saveNotes = debounce(async (body: Paragraph[]) => {
+  const saveNotes = debounce(async (body: Paragraph[], revision: number) => {
     if (!ownedSessionId) return;
-    await saveScratch(ownedSessionId, body, keepalive);
-    dirtyNotes = false;
-    syncUnloadGuard();
-    flash();
+    try {
+      await saveScratch(ownedSessionId, body, keepalive);
+      if (revision !== noteRevision) return;
+      dirtyNotes = false;
+      syncUnloadGuard();
+      flashNote(revision);
+    } catch {
+      if (revision === noteRevision) noteStatus = t('errors.saveFailed');
+    }
   }, 400);
   function bodyChanged(body: Paragraph[]) {
+    const revision = ++bodyRevision;
     sessionBody = body;
     dirtyBody = true;
     onLiveBody?.(ownedSessionId, body);
     syncUnloadGuard();
-    saved = t('common.saving');
-    saveBody(body);
+    clearTimeout(bodyStatusTimer);
+    bodyStatus = t('common.saving');
+    saveBody(body, revision);
   }
   function notesChanged(body: Paragraph[]) {
+    const revision = ++noteRevision;
     scratchBody = body;
     dirtyNotes = true;
     syncUnloadGuard();
-    saved = t('common.saving');
-    saveNotes(body);
+    clearTimeout(noteStatusTimer);
+    noteStatus = t('common.saving');
+    saveNotes(body, revision);
   }
   async function headerSave() {
     if (!ownedSessionId) return;
     try {
       await save(ownedSessionId, { title, worldDate });
-      flash();
     } finally {
       dirtyHeader = false;
     }
   }
-  function flash() {
-    saved = t('node.saved');
-    setTimeout(() => (saved = ''), 1600);
+  function flashBody(revision: number) {
+    clearTimeout(bodyStatusTimer);
+    bodyStatus = t('node.saved');
+    bodyStatusTimer = setTimeout(() => {
+      if (revision === bodyRevision) bodyStatus = '';
+    }, 1600);
+  }
+  function flashNote(revision: number) {
+    clearTimeout(noteStatusTimer);
+    noteStatus = t('node.saved');
+    noteStatusTimer = setTimeout(() => {
+      if (revision === noteRevision) noteStatus = '';
+    }, 1600);
   }
   function flushPending(useKeepalive = false) {
     keepalive = useKeepalive;
@@ -179,6 +216,8 @@
   }
   onDestroy(() => {
     mounted = false;
+    clearTimeout(bodyStatusTimer);
+    clearTimeout(noteStatusTimer);
     if (ownedSessionId) onLiveCursor?.(ownedSessionId, null);
     window.removeEventListener('beforeunload', flushForNavigation);
     flushPending();
@@ -220,9 +259,8 @@
         aria-label={t('session.trash')}
         use:tooltip={t('session.trash')}
         onclick={trash}><Icon name="trash" size={16} /></button
-      >{/if}<span>{displayedStatus}</span>{#if canStart}<button
-        class="primary-button start"
-        onclick={createSession}><Icon name="plus" size={15} /> {t('session.start')}</button
+      >{/if}{#if canStart}<button class="primary-button start" onclick={createSession}
+        ><Icon name="plus" size={15} /> {t('session.start')}</button
       >{/if}
   </header>
   {#if session}<div class="scroll">
@@ -255,6 +293,8 @@
           {openNode}
           {previewNode}
           createNode={createMention}
+          surfaceStatus={displayedStatus}
+          surfaceStatusTone={displayedStatusTone}
           {showContext}
           {showNodeContext}
         />
@@ -296,6 +336,12 @@
             {openNode}
             {previewNode}
             createNode={createMention}
+            surfaceStatus={noteStatus}
+            surfaceStatusTone={noteStatus === t('common.saving')
+              ? 'saving'
+              : noteStatus === t('errors.saveFailed')
+                ? 'error'
+                : 'saved'}
             {showContext}
             {showNodeContext}
           />
@@ -355,12 +401,6 @@
   }
   .session-bar .trash {
     color: var(--danger);
-  }
-  .session-bar > span {
-    flex: 1;
-    color: var(--text-3);
-    font: 9.5px var(--font-mono);
-    text-align: center;
   }
   .start {
     margin-left: auto;
@@ -540,9 +580,6 @@
       min-width: 0;
       max-width: none;
       flex: 1;
-    }
-    .session-bar > span {
-      display: none;
     }
     .start {
       font-size: 0;
