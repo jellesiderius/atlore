@@ -1,94 +1,101 @@
 .DEFAULT_GOAL := help
 COMPOSE := docker compose
+PRERELEASE ?= false
 
-.PHONY: help install infra dev up launch down stop restart logs status tunnel-check tunnel-up tunnel-down tunnel-restart tunnel-logs tunnel-status build migrate seed seed-10k test test-10k e2e check publish-wiki shell db-shell clean destroy
+.PHONY: help install infra dev up launch down stop restart logs status tunnel-check tunnel-up tunnel-down tunnel-restart tunnel-logs tunnel-status build migrate seed seed-10k test test-10k e2e check publish-wiki release shell db-shell clean destroy
 
-help: ## Toon alle commando's
-	@awk 'BEGIN {FS = ":.*## "; printf "Atlore commando’s:\n\n"} /^[a-zA-Z_-]+:.*## / { printf "  %-16s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
+help: ## List all commands
+	@awk 'BEGIN {FS = ":.*## "; printf "Atlore commands:\n\n"} /^[a-zA-Z0-9_-]+:.*## / { printf "  %-16s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
-install: ## Installeer npm-afhankelijkheden
+install: ## Install npm dependencies
 	npm install
 
-infra: ## Start alleen Postgres, Redis en MinIO voor lokale ontwikkeling
+infra: ## Start PostgreSQL, Redis, and MinIO for local development
 	$(COMPOSE) up -d postgres redis minio minio-init
 
-dev: infra migrate ## Start de lokale Vite-ontwikkelserver
+dev: infra migrate ## Start the local Vite development server
 	npm run dev
 
-up: ## Bouw en start de volledige productiestack
+up: ## Build and start the complete production stack
 	$(COMPOSE) up -d --build
 
-launch: up ## Alias voor up
+launch: up ## Alias for up
 
-down: ## Zet alle containers uit (data blijft staan)
+down: ## Stop and remove containers while preserving data
 	$(COMPOSE) down
 
-stop: ## Stop containers zonder ze te verwijderen
+stop: ## Stop containers without removing them
 	$(COMPOSE) stop
 
-restart: ## Herstart de volledige stack
+restart: ## Restart the complete stack
 	$(COMPOSE) restart
 
-logs: ## Volg de app-logs
+logs: ## Follow application logs
 	$(COMPOSE) logs -f --tail=150 app
 
-status: ## Toon containerstatus en healthchecks
+status: ## Show container status and health checks
 	$(COMPOSE) ps
 
-tunnel-check: ## Controleer de Cloudflare Tunnel-configuratie
+tunnel-check: ## Validate the Cloudflare Tunnel configuration
 	./scripts/check-cloudflare-tunnel.sh
 
-tunnel-up: tunnel-check ## Start de productiestack met Cloudflare Tunnel
+tunnel-up: tunnel-check ## Start the production stack with Cloudflare Tunnel
 	$(COMPOSE) --profile tunnel up -d --build
 
-tunnel-down: ## Stop alleen de publieke Cloudflare Tunnel
+tunnel-down: ## Stop only the public Cloudflare Tunnel
 	$(COMPOSE) --profile tunnel stop cloudflared
 
-tunnel-restart: tunnel-check ## Herstart alleen de Cloudflare Tunnel
+tunnel-restart: tunnel-check ## Recreate only the Cloudflare Tunnel
 	$(COMPOSE) --profile tunnel up -d --force-recreate cloudflared
 
-tunnel-logs: ## Volg de Cloudflare Tunnel-logs
+tunnel-logs: ## Follow Cloudflare Tunnel logs
 	$(COMPOSE) --profile tunnel logs -f --tail=150 cloudflared
 
-tunnel-status: ## Toon de status van Atlore en Cloudflare Tunnel
+tunnel-status: ## Show Atlore and Cloudflare Tunnel status
 	$(COMPOSE) --profile tunnel ps app cloudflared
 
-build: ## Maak een productiebuild
+build: ## Create a production build
 	npm run build
 
-migrate: ## Voer database-migraties uit
+migrate: ## Run database migrations
 	npm run db:migrate
 
-seed: ## Vul de database met de Atlore-demowereld
+seed: ## Populate the database with the Atlore demo world
 	npm run db:seed
 
-seed-10k: ## Maak een herhaalbare 10k-node loadtest voor LOAD_TEST_EMAIL
+seed-10k: ## Create a repeatable 10k-node world for LOAD_TEST_EMAIL
 	npm run db:seed:10k
 
-test: ## Draai unit- en integratietests
+test: ## Run unit and integration tests
 	npm run test
 
-test-10k: ## Test de 10k-node campagne in een echte Chromium-browser
+test-10k: ## Test the 10k-node campaign in a real Chromium browser
 	npm run test:load
 
-e2e: ## Draai Playwright end-to-endtests
+e2e: ## Run Playwright end-to-end tests
 	npm run test:e2e
 
-check: ## Typecheck, lint en tests
+check: ## Run type checking, linting, and tests
 	npm run check && npm run lint && npm run test
 
-publish-wiki: ## Publiceer docs/wiki naar de GitHub Wiki
+publish-wiki: ## Publish docs/wiki to the GitHub Wiki
 	./scripts/publish-wiki.sh
 
-shell: ## Open een shell in de appcontainer
+release: ## Start the manual release workflow after explicit approval
+	@test -n "$(VERSION)" || (echo "Usage: make release VERSION=1.1.0 [PRERELEASE=true]" >&2; exit 1)
+	@printf "Start GitHub Release v$(VERSION) from main? [y/N] "; read answer; \
+		case "$$answer" in y|Y) ;; *) echo "Release cancelled."; exit 1 ;; esac; \
+		gh workflow run release.yml --ref main --field version="$(VERSION)" --field prerelease="$(PRERELEASE)"
+
+shell: ## Open a shell in the application container
 	$(COMPOSE) exec app sh
 
-db-shell: ## Open psql in Postgres
+db-shell: ## Open psql in PostgreSQL
 	$(COMPOSE) exec postgres psql -U atlore -d atlore
 
-clean: ## Verwijder alleen gegenereerde lokale buildbestanden
+clean: ## Remove generated local build files only
 	npm exec rimraf -- build .svelte-kit coverage playwright-report test-results
 
-destroy: ## Verwijder containers én volumes na bevestiging
-	@read -p "Alle Atlore-data definitief verwijderen? [y/N] " answer; [ "$$answer" = "y" ]
+destroy: ## Remove containers and volumes after confirmation
+	@read -p "Permanently remove all Atlore data? [y/N] " answer; [ "$$answer" = "y" ]
 	$(COMPOSE) down -v --remove-orphans

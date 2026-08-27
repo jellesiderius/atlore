@@ -11,6 +11,7 @@
   <a href="#a-look-inside">Screenshots</a> ·
   <a href="#getting-started">Getting started</a> ·
   <a href="https://github.com/jellesiderius/atlore/releases/latest">Latest release</a> ·
+  <a href="./CHANGELOG.md">Changelog</a> ·
   <a href="https://github.com/jellesiderius/atlore/wiki">Documentation</a> ·
   <a href="#architecture">Architecture</a> ·
   <a href="./LICENSE">MIT License</a>
@@ -331,6 +332,8 @@ Every mutation is schema-validated and rechecks campaign permissions and node vi
 ## Contributing
 
 Issues and pull requests are welcome. Read [CONTRIBUTING.md](./CONTRIBUTING.md) for the development workflow.
+
+Release history lives in [CHANGELOG.md](./CHANGELOG.md). Releases require explicit maintainer approval and are published through the gated manual workflow described in [docs/RELEASING.md](./docs/RELEASING.md); ordinary pushes and tags never publish a release automatically.
 
 Atlore is released under the [MIT License](./LICENSE).
 

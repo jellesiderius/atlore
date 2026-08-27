@@ -1,0 +1,113 @@
+name: Create release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Approved semantic version without the v prefix, for example 1.1.0
+        required: true
+        type: string
+      prerelease:
+        description: Mark this release as a prerelease
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: atlore-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Validate and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate approved release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$GITHUB_REF_NAME" != "main" ]]; then
+            echo "Releases must be created from main, not $GITHUB_REF_NAME." >&2
+            exit 1
+          fi
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Version must be valid SemVer without a v prefix." >&2
+            exit 1
+          fi
+
+          package_version=$(node -p "require('./package.json').version")
+          lock_version=$(node -p "require('./package-lock.json').packages[''].version")
+          if [[ "$package_version" != "$VERSION" || "$lock_version" != "$VERSION" ]]; then
+            echo "package.json and package-lock.json must both contain version $VERSION." >&2
+            exit 1
+          fi
+
+          if ! grep -Fq "## [$VERSION] - " CHANGELOG.md; then
+            echo "CHANGELOG.md needs a dated [$VERSION] release section." >&2
+            exit 1
+          fi
+
+          ci_succeeded=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$GITHUB_SHA" --limit 20 --json conclusion --jq 'any(.[]; .conclusion == "success")')
+          if [[ "$ci_succeeded" != "true" ]]; then
+            echo "The exact main commit must have a successful CI run before release." >&2
+            exit 1
+          fi
+
+          tag="v$VERSION"
+          if git rev-parse --verify "refs/tags/$tag" >/dev/null 2>&1; then
+            tag_commit=$(git rev-list -n 1 "$tag")
+            if [[ "$tag_commit" != "$GITHUB_SHA" ]]; then
+              echo "$tag already points to a different commit." >&2
+              exit 1
+            fi
+          fi
+
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "GitHub Release $tag already exists." >&2
+            exit 1
+          fi
+
+          awk -v heading="## [$VERSION]" '
+            index($0, heading) == 1 { capture = 1; next }
+            capture && /^## \[/ { exit }
+            capture { print }
+          ' CHANGELOG.md > release-notes.md
+
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "The CHANGELOG.md release section is empty." >&2
+            exit 1
+          fi
+
+          printf '\n---\n\nFull release history: [CHANGELOG.md](https://github.com/%s/blob/%s/CHANGELOG.md).\n' "$GITHUB_REPOSITORY" "$tag" >> release-notes.md
+
+      - name: Create tag and GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          flags=(--latest)
+          if [[ "$PRERELEASE" == "true" ]]; then
+            flags=(--prerelease)
+          fi
+          gh release create "$tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Atlore $tag" \
+            --notes-file release-notes.md \
+            "${flags[@]}"
