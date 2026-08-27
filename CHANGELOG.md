@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-27
+
 ### Added
 
 - Optional remotely-managed Cloudflare Tunnel deployment profile, validation, operations commands, CI coverage, and self-hosting guide.
@@ -13,12 +15,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Mobile tap previews for nodes pinned to an atlas map.
 - English as the initial interface language while retaining per-account language preferences.
 - A small version and source-commit identifier on auth and campaign overview screens.
+- An approval-gated GitHub release workflow with changelog-derived release notes and automatic source archives.
 
 ### Changed
 
 - Docker-published application, PostgreSQL, Redis, and MinIO ports bind to `127.0.0.1` by default.
 - Node editors exclude the node being edited from `@` mention suggestions and automatic self-linking.
 - Production Make targets embed the current Git commit in rebuilt Docker images so tunnel deployments can be verified visually.
+- GitHub Actions use current Node.js 24-based action runtimes.
 
 ## [1.0.0] - 2026-08-27
 
@@ -35,5 +39,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Responsive desktop and mobile navigation, installable PWA metadata, Docker Compose, Make commands, automated tests, CI, screenshots, and a complete GitHub Wiki.
 - MIT license, contribution guide, funding configuration, demo campaign, and documented release archives.
 
-[Unreleased]: https://github.com/jellesiderius/atlore/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/jellesiderius/atlore/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/jellesiderius/atlore/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/jellesiderius/atlore/releases/tag/v1.0.0
